@@ -1,0 +1,26 @@
+{
+  "name": "yasc",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "build": "nx run-many --target=build",
+    "test": "nx run-many --target=test",
+    "lint": "nx run-many --target=lint",
+    "typecheck": "nx run-many --target=typecheck"
+  },
+  "devDependencies": {
+    "nx": "^19.0.0",
+    "@nx/js": "^19.0.0",
+    "@nx/react": "^19.0.0",
+    "@nx/eslint": "^19.0.0",
+    "@nx/vite": "^19.0.0",
+    "typescript": "^5.4.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.2.0",
+    "vitest": "^1.6.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0"
+  }
+}
