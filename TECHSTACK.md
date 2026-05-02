@@ -109,8 +109,8 @@ self-hosted Splitwise clone targeting web, iOS, and Android.
 | Reverse proxy + static files | **Nginx** | BSD |
 | Email (dev) | **Mailpit** (Docker) | MIT |
 | Email (prod) | **Postal** (Docker) | Apache 2.0 |
-| Git hosting | **Gitea** (Docker) | MIT |
-| CI/CD | **Woodpecker CI** (Docker) | Apache 2.0 |
+| Git hosting | **GitHub** | — |
+| CI/CD | **GitHub Actions** | — |
 | Hosting target | Any VPS (Hetzner, OVH, Contabo) or bare metal | — |
 
 ---
@@ -160,6 +160,7 @@ submitted to the App Store / Google Play by the developer.
 
 | Rejected Option | Reason |
 |---|---|
+| Gitea + Woodpecker CI | Self-hosted CI is meaningful ops overhead for dev tooling with no user data at stake; GitHub Actions is simpler and free |
 | Vercel (hosting) | Vendor lock-in |
 | Turborepo remote cache | Vercel product |
 | Supabase | SaaS with free-tier limits, data not self-owned |
