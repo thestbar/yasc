@@ -1,0 +1,21 @@
+version: '3.9'
+
+services:
+  mailpit:
+    image: axllent/mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - yasc_net
+
+  api:
+    environment:
+      APP_ENV: development
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+
+networks:
+  yasc_net:
+    driver: bridge
