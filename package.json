@@ -9,11 +9,11 @@
     "typecheck": "nx run-many --target=typecheck"
   },
   "devDependencies": {
-    "nx": "^19.0.0",
-    "@nx/js": "^19.0.0",
-    "@nx/react": "^19.0.0",
-    "@nx/eslint": "^19.0.0",
-    "@nx/vite": "^19.0.0",
+    "nx": "19.8.4",
+    "@nx/js": "19.8.4",
+    "@nx/react": "19.8.4",
+    "@nx/eslint": "19.8.4",
+    "@nx/vite": "19.8.4",
     "typescript": "^5.4.0",
     "eslint": "^9.0.0",
     "prettier": "^3.2.0",
