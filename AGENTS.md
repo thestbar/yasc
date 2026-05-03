@@ -14,8 +14,8 @@ conditions below are met.
 | A | Infra | `tasks/TASKS_INFRA.md` | 1 | `DONE` |
 | B | Shared Packages | `tasks/TASKS_SHARED.md` | 1 | `DONE` |
 | C | Backend | `tasks/TASKS_BACKEND.md` | 2 | `DONE` |
-| D | Web | `tasks/TASKS_WEB.md` | 3 | `PENDING` |
-| E | Mobile | `tasks/TASKS_MOBILE.md` | 3 | `PENDING` |
+| D | Web | `tasks/TASKS_WEB.md` | 3 | `DONE` |
+| E | Mobile | `tasks/TASKS_MOBILE.md` | 3 | `DONE` |
 
 **Status values:** `PENDING` · `IN PROGRESS` · `BLOCKED` · `DONE`
 
@@ -34,8 +34,8 @@ Phase 2
                                         │
                                         ▼ Phase Gate 2
 Phase 3 (parallel)
-├── Agent D: Web ───────────────────────────────────────────────► DONE
-└── Agent E: Mobile ───────────────────────────────────────────► DONE
+├── Agent D: Web ───────────────────────────────────────────────► DONE ✓
+└── Agent E: Mobile ───────────────────────────────────────────► DONE ✓
 ```
 
 ---
@@ -279,8 +279,8 @@ Format: `[AGENT] [STATUS] [DATE] — Description`
 [A] [DONE] 2026-05-02 — Nx monorepo scaffold complete. Docker Compose (postgres, api, nginx, frankfurter, mailpit), Nginx config, multi-stage Dockerfiles, GitHub Actions CI/deploy workflows, env templates, and dev docs written.
 [B] [DONE] 2026-05-03 — All four packages scaffolded. types: all domain interfaces. utils: split engine + debt simplification + currency + date + validation, 61 tests passing. ui: 13 web components. ui-native: 12 mobile components + BottomSheet + SectionListWrapper. Phase Gate 1 fully checked off.
 [C] [DONE] 2026-05-03 — Full Go backend: Echo v4, Bun ORM, 8 handler groups (auth, users, friends, groups, expenses, settlements, currency, activity), migrations, seed script, 16 service tests passing. Phase Gate 2 signed off.
-[D] [DONE] YYYY-MM-DD — All web screens complete. MVP checklist items verified.
-[E] [DONE] YYYY-MM-DD — All mobile screens complete. MVP checklist items verified.
+[D] [DONE] 2026-05-03 — Complete React SPA: Vite+React 18, all 4 tabs (Groups, Friends, Activity, Account), full auth flow, expense add/edit with 4 split types, group invite join flow, dark mode, session restore from refresh token. TypeScript clean.
+[E] [DONE] 2026-05-04 — Complete Expo React Native app: Expo Router, 4 tabs (Groups, Friends, Activity, Account), full auth flow, expense add/edit with 4 split types, group management, invite link deep link, NativeWind styling, JWT in expo-secure-store, TypeScript clean.
 ```
 
 *(Replace placeholders with actual dates and descriptions as work is completed)*
