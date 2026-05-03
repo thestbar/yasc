@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS exchange_rates;
+DROP TABLE IF EXISTS password_reset_tokens;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS activity_logs;
+DROP TABLE IF EXISTS settlements;
+DROP TABLE IF EXISTS expense_splits;
+DROP TABLE IF EXISTS expenses;
+DROP TABLE IF EXISTS group_members;
+DROP TABLE IF EXISTS groups;
+DROP TABLE IF EXISTS friendships;
+DROP TABLE IF EXISTS users;
