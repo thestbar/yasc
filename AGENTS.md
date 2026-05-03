@@ -12,7 +12,7 @@ conditions below are met.
 | ID | Agent | Task File | Phase | Status |
 |---|---|---|---|---|
 | A | Infra | `tasks/TASKS_INFRA.md` | 1 | `DONE` |
-| B | Shared Packages | `tasks/TASKS_SHARED.md` | 1 | `PENDING` |
+| B | Shared Packages | `tasks/TASKS_SHARED.md` | 1 | `DONE` |
 | C | Backend | `tasks/TASKS_BACKEND.md` | 2 | `PENDING` |
 | D | Web | `tasks/TASKS_WEB.md` | 3 | `PENDING` |
 | E | Mobile | `tasks/TASKS_MOBILE.md` | 3 | `PENDING` |
@@ -48,11 +48,11 @@ conditions for that gate are verified and checked off below.
 ### Phase Gate 1 — Unlocks: Agent C (Backend)
 
 - [x] `nx.json` exists at repo root
-- [ ] `packages/types/src/index.ts` exports all domain interfaces
-- [ ] `packages/utils/src/index.ts` exports all split calculation functions
+- [x] `packages/types/src/index.ts` exports all domain interfaces
+- [x] `packages/utils/src/index.ts` exports all split calculation functions
 - [x] `tsconfig.base.json` path aliases are configured for all packages
-- [ ] `pnpm install` runs successfully from repo root
-- [ ] **Signed off by:** Agent B (Shared Packages)
+- [x] `pnpm install` runs successfully from repo root
+- [x] **Signed off by:** Agent B (Shared Packages)
 
 ### Phase Gate 2 — Unlocks: Agent D (Web) and Agent E (Mobile)
 
@@ -277,7 +277,7 @@ Format: `[AGENT] [STATUS] [DATE] — Description`
 
 ```
 [A] [DONE] 2026-05-02 — Nx monorepo scaffold complete. Docker Compose (postgres, api, nginx, frankfurter, mailpit), Nginx config, multi-stage Dockerfiles, GitHub Actions CI/deploy workflows, env templates, and dev docs written.
-[B] [DONE] YYYY-MM-DD — Shared packages scaffolded. types + utils published. Gate 1 ready.
+[B] [DONE] 2026-05-03 — All four packages scaffolded. types: all domain interfaces. utils: split engine + debt simplification + currency + date + validation, 61 tests passing. ui: 13 web components. ui-native: 12 mobile components + BottomSheet + SectionListWrapper. Phase Gate 1 fully checked off.
 [C] [DONE] YYYY-MM-DD — openapi.json committed. All endpoints implemented. Gate 2 ready.
 [D] [DONE] YYYY-MM-DD — All web screens complete. MVP checklist items verified.
 [E] [DONE] YYYY-MM-DD — All mobile screens complete. MVP checklist items verified.
