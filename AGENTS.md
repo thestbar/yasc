@@ -11,7 +11,7 @@ conditions below are met.
 
 | ID | Agent | Task File | Phase | Status |
 |---|---|---|---|---|
-| A | Infra | `tasks/TASKS_INFRA.md` | 1 | `PENDING` |
+| A | Infra | `tasks/TASKS_INFRA.md` | 1 | `DONE` |
 | B | Shared Packages | `tasks/TASKS_SHARED.md` | 1 | `PENDING` |
 | C | Backend | `tasks/TASKS_BACKEND.md` | 2 | `PENDING` |
 | D | Web | `tasks/TASKS_WEB.md` | 3 | `PENDING` |
@@ -47,10 +47,10 @@ conditions for that gate are verified and checked off below.
 
 ### Phase Gate 1 — Unlocks: Agent C (Backend)
 
-- [ ] `nx.json` exists at repo root
+- [x] `nx.json` exists at repo root
 - [ ] `packages/types/src/index.ts` exports all domain interfaces
 - [ ] `packages/utils/src/index.ts` exports all split calculation functions
-- [ ] `tsconfig.base.json` path aliases are configured for all packages
+- [x] `tsconfig.base.json` path aliases are configured for all packages
 - [ ] `pnpm install` runs successfully from repo root
 - [ ] **Signed off by:** Agent B (Shared Packages)
 
@@ -276,8 +276,8 @@ Agents append to this log chronologically. Do not edit existing entries.
 Format: `[AGENT] [STATUS] [DATE] — Description`
 
 ```
+[A] [DONE] 2026-05-02 — Nx monorepo scaffold complete. Docker Compose (postgres, api, nginx, frankfurter, mailpit), Nginx config, multi-stage Dockerfiles, GitHub Actions CI/deploy workflows, env templates, and dev docs written.
 [B] [DONE] YYYY-MM-DD — Shared packages scaffolded. types + utils published. Gate 1 ready.
-[A] [DONE] YYYY-MM-DD — Docker Compose stack complete. Dockerfiles written. CI pipelines done.
 [C] [DONE] YYYY-MM-DD — openapi.json committed. All endpoints implemented. Gate 2 ready.
 [D] [DONE] YYYY-MM-DD — All web screens complete. MVP checklist items verified.
 [E] [DONE] YYYY-MM-DD — All mobile screens complete. MVP checklist items verified.

@@ -1,0 +1,60 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-yasc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-yasc}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-yasc}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - yasc_net
+
+  frankfurter:
+    image: ghcr.io/hakanensari/frankfurter
+    restart: unless-stopped
+    networks:
+      - yasc_net
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-yasc}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-yasc}
+    env_file:
+      - apps/api/.env
+    networks:
+      - yasc_net
+
+  nginx:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+    networks:
+      - yasc_net
+
+volumes:
+  postgres_data:
+
+networks:
+  yasc_net:
+    driver: bridge

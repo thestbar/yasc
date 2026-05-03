@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": true,
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@yasc/types": ["packages/types/src/index.ts"],
+      "@yasc/utils": ["packages/utils/src/index.ts"],
+      "@yasc/ui": ["packages/ui/src/index.ts"],
+      "@yasc/ui-native": ["packages/ui-native/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "tmp"]
+}
