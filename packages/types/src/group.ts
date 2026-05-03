@@ -4,10 +4,9 @@ import type { SplitType } from './expense'
 export interface Group {
   id: string
   name: string
+  description: string | null
+  currency: string
   imageUrl: string | null
-  startDate: string | null
-  endDate: string | null
-  maxMembers: number | null
   simplifyDebts: boolean
   defaultSplit: SplitType
   inviteCode: string
@@ -19,6 +18,7 @@ export interface Group {
 export interface GroupMember {
   id: string
   groupId: string
+  userId: string
   user: User
   joinedAt: string
   role: 'owner' | 'member'
