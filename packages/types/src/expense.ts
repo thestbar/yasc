@@ -35,6 +35,7 @@ export interface Expense {
 export interface ExpenseSplit {
   id: string
   expenseId: string
+  userId: string
   user: User
   amount: number
   percentage: number | null
