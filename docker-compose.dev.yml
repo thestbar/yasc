@@ -1,6 +1,10 @@
 version: '3.9'
 
 services:
+  postgres:
+    ports:
+      - "5433:5432"
+
   mailpit:
     image: axllent/mailpit
     restart: unless-stopped

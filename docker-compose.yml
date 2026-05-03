@@ -33,7 +33,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-yasc}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-yasc}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-yasc}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-yasc}?sslmode=disable
     env_file:
       - apps/api/.env
     networks:

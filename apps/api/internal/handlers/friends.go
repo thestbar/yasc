@@ -28,7 +28,7 @@ func (h *FriendsHandler) List(c echo.Context) error {
 	var friendships []models.Friendship
 	if err := h.db.NewSelect().Model(&friendships).
 		Relation("User").Relation("Friend").
-		Where("(f.user_id = ? OR f.friend_id = ?) AND f.status = 'accepted'", userID, userID).
+		Where("(friendship.user_id = ? OR friendship.friend_id = ?) AND friendship.status = 'accepted'", userID, userID).
 		Scan(ctx); err != nil {
 		return internalError(c)
 	}
@@ -42,7 +42,7 @@ func (h *FriendsHandler) Requests(c echo.Context) error {
 	var friendships []models.Friendship
 	if err := h.db.NewSelect().Model(&friendships).
 		Relation("User").
-		Where("f.friend_id = ? AND f.status = 'pending'", userID).
+		Where("friendship.friend_id = ? AND friendship.status = 'pending'", userID).
 		Scan(ctx); err != nil {
 		return internalError(c)
 	}

@@ -7,7 +7,7 @@
 | Docker + Docker Compose | 24+ | Running the full stack |
 | pnpm | 9+ | JavaScript package manager |
 | Node.js | 20+ | Frontend + shared packages |
-| Go | 1.23+ | Backend API (for local dev) |
+| Go | 1.25+ | Backend API (for local dev) |
 | Xcode | Latest | iOS simulator (macOS only) |
 | Android Studio | Latest | Android emulator |
 

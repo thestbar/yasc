@@ -34,8 +34,8 @@ func (h *SettlementsHandler) List(c echo.Context) error {
 	var settlements []models.Settlement
 	if err := h.db.NewSelect().Model(&settlements).
 		Relation("FromUser").Relation("ToUser").
-		Where("s.group_id = ?", groupID).
-		OrderExpr("s.date DESC, s.created_at DESC").
+		Where("settlement.group_id = ?", groupID).
+		OrderExpr("settlement.date DESC, settlement.created_at DESC").
 		Scan(ctx); err != nil {
 		return internalError(c)
 	}

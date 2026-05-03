@@ -58,21 +58,21 @@ func (h *ExpensesHandler) List(c echo.Context) error {
 		Relation("PaidBy").Relation("Splits", func(q *bun.SelectQuery) *bun.SelectQuery {
 		return q.Relation("User")
 	}).
-		Where("e.group_id = ?", groupID).
-		OrderExpr("e.date DESC, e.created_at DESC").
+		Where("expense.group_id = ?", groupID).
+		OrderExpr("expense.date DESC, expense.created_at DESC").
 		Limit(limit).Offset((page - 1) * limit)
 
 	if cat := c.QueryParam("category"); cat != "" {
-		q = q.Where("e.category = ?", cat)
+		q = q.Where("expense.category = ?", cat)
 	}
 	if paid := c.QueryParam("paidById"); paid != "" {
-		q = q.Where("e.paid_by_id = ?", paid)
+		q = q.Where("expense.paid_by_id = ?", paid)
 	}
 	if from := c.QueryParam("dateFrom"); from != "" {
-		q = q.Where("e.date >= ?", from)
+		q = q.Where("expense.date >= ?", from)
 	}
 	if to := c.QueryParam("dateTo"); to != "" {
-		q = q.Where("e.date <= ?", to)
+		q = q.Where("expense.date <= ?", to)
 	}
 
 	if err := q.Scan(ctx); err != nil {
@@ -208,7 +208,7 @@ func (h *ExpensesHandler) Get(c echo.Context) error {
 	if err := h.db.NewSelect().Model(expense).
 		Relation("PaidBy").
 		Relation("Splits", func(q *bun.SelectQuery) *bun.SelectQuery { return q.Relation("User") }).
-		Where("e.id = ? AND e.group_id = ?", id, groupID).Scan(ctx); err != nil {
+		Where("expense.id = ? AND expense.group_id = ?", id, groupID).Scan(ctx); err != nil {
 		return notFound(c, "expense not found")
 	}
 	return c.JSON(http.StatusOK, expense)

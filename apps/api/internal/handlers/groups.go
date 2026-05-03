@@ -38,9 +38,9 @@ func (h *GroupsHandler) List(c echo.Context) error {
 
 	var groups []models.Group
 	if err := h.db.NewSelect().Model(&groups).
-		Join("JOIN group_members gm ON gm.group_id = g.id").
+		Join(`JOIN group_members gm ON gm.group_id = "group".id`).
 		Where("gm.user_id = ?", userID).
-		OrderExpr("g.created_at DESC").
+		OrderExpr(`"group".created_at DESC`).
 		Scan(ctx); err != nil {
 		return internalError(c)
 	}
@@ -116,7 +116,7 @@ func (h *GroupsHandler) Get(c echo.Context) error {
 		Relation("Members", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Relation("User")
 		}).
-		Where("g.id = ?", id).Scan(ctx); err != nil {
+		Where(`"group".id = ?`, id).Scan(ctx); err != nil {
 		return notFound(c, "group not found")
 	}
 	return c.JSON(http.StatusOK, group)
@@ -193,7 +193,7 @@ func (h *GroupsHandler) ListMembers(c echo.Context) error {
 
 	var members []models.GroupMember
 	if err := h.db.NewSelect().Model(&members).
-		Relation("User").Where("gm.group_id = ?", id).Scan(ctx); err != nil {
+		Relation("User").Where("group_member.group_id = ?", id).Scan(ctx); err != nil {
 		return internalError(c)
 	}
 	return c.JSON(http.StatusOK, members)
@@ -356,10 +356,10 @@ func (h *GroupsHandler) Balances(c echo.Context) error {
 	}
 
 	var expenses []*models.Expense
-	_ = h.db.NewSelect().Model(&expenses).Relation("Splits").Where("e.group_id = ?", id).Scan(ctx)
+	_ = h.db.NewSelect().Model(&expenses).Relation("Splits").Where("expense.group_id = ?", id).Scan(ctx)
 
 	var settlements []*models.Settlement
-	_ = h.db.NewSelect().Model(&settlements).Where("s.group_id = ?", id).Scan(ctx)
+	_ = h.db.NewSelect().Model(&settlements).Where("settlement.group_id = ?", id).Scan(ctx)
 
 	balances := services.CalculateGroupBalances(expenses, settlements)
 
