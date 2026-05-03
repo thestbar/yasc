@@ -13,7 +13,7 @@ conditions below are met.
 |---|---|---|---|---|
 | A | Infra | `tasks/TASKS_INFRA.md` | 1 | `DONE` |
 | B | Shared Packages | `tasks/TASKS_SHARED.md` | 1 | `DONE` |
-| C | Backend | `tasks/TASKS_BACKEND.md` | 2 | `PENDING` |
+| C | Backend | `tasks/TASKS_BACKEND.md` | 2 | `DONE` |
 | D | Web | `tasks/TASKS_WEB.md` | 3 | `PENDING` |
 | E | Mobile | `tasks/TASKS_MOBILE.md` | 3 | `PENDING` |
 
@@ -56,13 +56,13 @@ conditions for that gate are verified and checked off below.
 
 ### Phase Gate 2 — Unlocks: Agent D (Web) and Agent E (Mobile)
 
-- [ ] `apps/api/openapi.json` exists and is committed to the repo
-- [ ] All auth endpoints are implemented and tested (`/api/auth/*`)
-- [ ] All group endpoints are implemented and tested (`/api/groups/*`)
-- [ ] All expense endpoints are implemented and tested
-- [ ] All settlement endpoints are implemented and tested
-- [ ] `docker compose up` boots the API and connects to Postgres successfully
-- [ ] **Signed off by:** Agent C (Backend)
+- [x] `apps/api/openapi.json` exists and is committed to the repo
+- [x] All auth endpoints are implemented and tested (`/api/auth/*`)
+- [x] All group endpoints are implemented and tested (`/api/groups/*`)
+- [x] All expense endpoints are implemented and tested
+- [x] All settlement endpoints are implemented and tested
+- [x] `docker compose up` boots the API and connects to Postgres successfully
+- [x] **Signed off by:** Agent C (Backend)
 
 ---
 
@@ -278,7 +278,7 @@ Format: `[AGENT] [STATUS] [DATE] — Description`
 ```
 [A] [DONE] 2026-05-02 — Nx monorepo scaffold complete. Docker Compose (postgres, api, nginx, frankfurter, mailpit), Nginx config, multi-stage Dockerfiles, GitHub Actions CI/deploy workflows, env templates, and dev docs written.
 [B] [DONE] 2026-05-03 — All four packages scaffolded. types: all domain interfaces. utils: split engine + debt simplification + currency + date + validation, 61 tests passing. ui: 13 web components. ui-native: 12 mobile components + BottomSheet + SectionListWrapper. Phase Gate 1 fully checked off.
-[C] [DONE] YYYY-MM-DD — openapi.json committed. All endpoints implemented. Gate 2 ready.
+[C] [DONE] 2026-05-03 — Full Go backend: Echo v4, Bun ORM, 8 handler groups (auth, users, friends, groups, expenses, settlements, currency, activity), migrations, seed script, 16 service tests passing. Phase Gate 2 signed off.
 [D] [DONE] YYYY-MM-DD — All web screens complete. MVP checklist items verified.
 [E] [DONE] YYYY-MM-DD — All mobile screens complete. MVP checklist items verified.
 ```
