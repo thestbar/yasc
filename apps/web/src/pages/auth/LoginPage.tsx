@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useLogin } from '../../lib/hooks/useAuth'
 
@@ -13,13 +13,15 @@ type Fields = z.infer<typeof schema>
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirect = searchParams.get('redirect') ?? '/groups'
   const login = useLogin()
   const { register, handleSubmit, formState: { errors } } = useForm<Fields>({ resolver: zodResolver(schema) })
 
   const onSubmit = handleSubmit(async (data) => {
     try {
       await login.mutateAsync(data)
-      navigate('/groups')
+      navigate(redirect, { replace: true })
     } catch {
       toast.error('Invalid email or password')
     }
@@ -53,7 +55,7 @@ export function LoginPage() {
             </button>
           </form>
           <p className="text-center text-xs text-gray-500 mt-4">
-            No account? <Link to="/auth/register" className="text-brand-600 hover:underline">Create one</Link>
+            No account? <Link to={`/auth/register${redirect !== '/groups' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`} className="text-brand-600 hover:underline">Create one</Link>
           </p>
         </div>
       </div>

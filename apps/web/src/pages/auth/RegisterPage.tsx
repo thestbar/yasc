@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useRegister } from '../../lib/hooks/useAuth'
 import { isValidUsername, isValidEmail } from '@yasc/utils'
@@ -20,13 +20,15 @@ type Fields = z.infer<typeof schema>
 
 export function RegisterPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirect = searchParams.get('redirect') ?? '/groups'
   const register_ = useRegister()
   const { register, handleSubmit, formState: { errors } } = useForm<Fields>({ resolver: zodResolver(schema) })
 
   const onSubmit = handleSubmit(async ({ confirmPassword: _, ...data }) => {
     try {
       await register_.mutateAsync(data)
-      navigate('/groups')
+      navigate(redirect, { replace: true })
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Registration failed')
     }
@@ -60,7 +62,7 @@ export function RegisterPage() {
             </button>
           </form>
           <p className="text-center text-xs text-gray-500 mt-4">
-            Already have an account? <Link to="/auth/login" className="text-brand-600 hover:underline">Sign in</Link>
+            Already have an account? <Link to={`/auth/login${redirect !== '/groups' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`} className="text-brand-600 hover:underline">Sign in</Link>
           </p>
         </div>
       </div>

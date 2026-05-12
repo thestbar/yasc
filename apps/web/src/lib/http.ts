@@ -25,11 +25,14 @@ http.interceptors.response.use(
       try {
         if (!refreshing) {
           refreshing = axios
-            .post('/api/auth/refresh', {}, { withCredentials: true })
+            .post('/api/auth/refresh', { refreshToken: localStorage.getItem('rt') })
             .then((r) => {
-              const { accessToken, refreshToken } = r.data
-              useAuthStore.getState().setToken(accessToken)
-              // persist refreshToken in localStorage as fallback (httpOnly cookie preferred)
+              const { accessToken, refreshToken, user } = r.data
+              if (user) {
+                useAuthStore.getState().setAuth(user, accessToken)
+              } else {
+                useAuthStore.getState().setToken(accessToken)
+              }
               if (refreshToken) localStorage.setItem('rt', refreshToken)
               return accessToken
             })
@@ -41,7 +44,8 @@ http.interceptors.response.use(
       } catch {
         useAuthStore.getState().clear()
         localStorage.removeItem('rt')
-        window.location.href = '/auth/login'
+        const redirect = encodeURIComponent(window.location.pathname + window.location.search)
+        window.location.href = `/auth/login?redirect=${redirect}`
       }
     }
     return Promise.reject(err)
