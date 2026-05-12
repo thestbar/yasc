@@ -1,8 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { groupsApi, type CreateGroupData } from '../api/groups'
+import { http } from '../http'
 
 export function useGroups() {
   return useQuery({ queryKey: ['groups'], queryFn: groupsApi.list })
+}
+
+export function useIsMember(groupId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['groups', groupId, 'is-member'],
+    queryFn: () => http.get<{ isMember: boolean }>(`/groups/${groupId}/is-member`).then((r) => r.data.isMember),
+    enabled: enabled && !!groupId,
+  })
 }
 
 export function useGroup(id: string) {

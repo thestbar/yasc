@@ -9,6 +9,7 @@ export interface CreateGroupData {
 }
 
 export interface JoinPreviewResponse {
+  id: string
   name: string
   description?: string
   currency: string
