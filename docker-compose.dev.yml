@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   postgres:
     ports:
@@ -15,6 +13,8 @@ services:
       - yasc_net
 
   api:
+    ports:
+      - "3000:3000"
     environment:
       APP_ENV: development
       SMTP_HOST: mailpit

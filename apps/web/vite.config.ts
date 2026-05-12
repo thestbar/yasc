@@ -12,7 +12,20 @@ export default defineConfig({
       '@yasc/ui': resolve(__dirname, '../../packages/ui/src/index.ts'),
     },
   },
+  optimizeDeps: {
+    include: ['@yasc/types', '@yasc/utils', '@yasc/ui'],
+  },
   server: {
+    watch: {
+      ignored: [
+        '**/node_modules/**',
+        '**/apps/api/**',
+        '**/apps/mobile/**',
+        '**/.git/**',
+        '**/dist/**',
+        '**/infra/**',
+      ],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
