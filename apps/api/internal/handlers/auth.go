@@ -137,12 +137,18 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 		return internalError(c)
 	}
 
-	_, _ = h.db.NewDelete().Model(rt).WherePK().Exec(ctx)
-	access, refresh, err := h.issueTokens(ctx, user)
+	// Sliding expiry: extend RT lifetime instead of rotating, so a lost
+	// response (e.g. page reload mid-request) never strands the user.
+	refreshExpiry, _ := time.ParseDuration(h.cfg.RefreshExpiry)
+	_, _ = h.db.NewUpdate().Model(rt).
+		Set("expires_at = ?", time.Now().Add(refreshExpiry)).
+		WherePK().Exec(ctx)
+
+	access, err := h.issueAccessToken(user)
 	if err != nil {
 		return internalError(c)
 	}
-	return c.JSON(http.StatusOK, map[string]string{"accessToken": access, "refreshToken": refresh})
+	return c.JSON(http.StatusOK, AuthResponse{AccessToken: access, RefreshToken: body.RefreshToken, User: user})
 }
 
 func (h *AuthHandler) Logout(c echo.Context) error {
@@ -226,6 +232,19 @@ func (h *AuthHandler) ResetPassword(c echo.Context) error {
 	_, _ = h.db.NewDelete().Model((*models.RefreshToken)(nil)).Where("user_id = ?", prt.UserID).Exec(ctx)
 
 	return c.JSON(http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (h *AuthHandler) issueAccessToken(user *models.User) (string, error) {
+	expiry, _ := time.ParseDuration(h.cfg.JWTExpiry)
+	claims := appMiddleware.JWTClaims{
+		UserID: user.ID,
+		Email:  user.Email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiry)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(h.cfg.JWTSecret))
 }
 
 func (h *AuthHandler) issueTokens(ctx context.Context, user *models.User) (string, string, error) {
