@@ -24,6 +24,8 @@ func NewGroupsHandler(db *bun.DB, act *services.ActivityService) *GroupsHandler 
 
 type CreateGroupRequest struct {
 	Name          string  `json:"name"`
+	Description   *string `json:"description"`
+	Currency      string  `json:"currency"`
 	ImageURL      *string `json:"imageUrl"`
 	StartDate     *string `json:"startDate"`
 	EndDate       *string `json:"endDate"`
@@ -36,7 +38,7 @@ func (h *GroupsHandler) List(c echo.Context) error {
 	ctx := c.Request().Context()
 	userID := appMiddleware.CurrentUserID(c)
 
-	var groups []models.Group
+	groups := make([]models.Group, 0)
 	if err := h.db.NewSelect().Model(&groups).
 		Join(`JOIN group_members gm ON gm.group_id = "group".id`).
 		Where("gm.user_id = ?", userID).
@@ -59,10 +61,15 @@ func (h *GroupsHandler) Create(c echo.Context) error {
 	if req.DefaultSplit == "" {
 		req.DefaultSplit = "equal"
 	}
+	if req.Currency == "" {
+		req.Currency = "USD"
+	}
 
 	group := &models.Group{
 		ID:            uuid.New().String(),
 		Name:          req.Name,
+		Description:   req.Description,
+		Currency:      req.Currency,
 		ImageURL:      req.ImageURL,
 		StartDate:     req.StartDate,
 		EndDate:       req.EndDate,
@@ -133,6 +140,8 @@ func (h *GroupsHandler) Update(c echo.Context) error {
 
 	var body struct {
 		Name          *string `json:"name"`
+		Description   *string `json:"description"`
+		Currency      *string `json:"currency"`
 		ImageURL      *string `json:"imageUrl"`
 		MaxMembers    *int    `json:"maxMembers"`
 		SimplifyDebts *bool   `json:"simplifyDebts"`
@@ -145,6 +154,12 @@ func (h *GroupsHandler) Update(c echo.Context) error {
 	q := h.db.NewUpdate().Model((*models.Group)(nil)).Where("id = ?", id).Set("updated_at = ?", time.Now())
 	if body.Name != nil {
 		q = q.Set("name = ?", *body.Name)
+	}
+	if body.Description != nil {
+		q = q.Set("description = ?", *body.Description)
+	}
+	if body.Currency != nil {
+		q = q.Set("currency = ?", *body.Currency)
 	}
 	if body.ImageURL != nil {
 		q = q.Set("image_url = ?", *body.ImageURL)
@@ -191,7 +206,7 @@ func (h *GroupsHandler) ListMembers(c echo.Context) error {
 		return forbidden(c, "not a member")
 	}
 
-	var members []models.GroupMember
+	members := make([]models.GroupMember, 0)
 	if err := h.db.NewSelect().Model(&members).
 		Relation("User").Where("group_member.group_id = ?", id).Scan(ctx); err != nil {
 		return internalError(c)
@@ -311,7 +326,14 @@ func (h *GroupsHandler) JoinPreview(c echo.Context) error {
 	if err := h.db.NewSelect().Model(group).Where("invite_code = ?", code).Scan(ctx); err != nil {
 		return notFound(c, "invite link not found or expired")
 	}
-	return c.JSON(http.StatusOK, map[string]any{"group": map[string]any{"id": group.ID, "name": group.Name, "imageUrl": group.ImageURL}})
+	memberCount, _ := h.db.NewSelect().Model((*models.GroupMember)(nil)).Where("group_id = ?", group.ID).Count(ctx)
+	return c.JSON(http.StatusOK, map[string]any{
+		"id":          group.ID,
+		"name":        group.Name,
+		"description": group.Description,
+		"currency":    group.Currency,
+		"memberCount": memberCount,
+	})
 }
 
 func (h *GroupsHandler) Join(c echo.Context) error {
@@ -343,7 +365,15 @@ func (h *GroupsHandler) Join(c echo.Context) error {
 		return internalError(c)
 	}
 	h.activity.LogMemberJoined(ctx, userID, group.ID)
-	return c.JSON(http.StatusOK, map[string]any{"group": group})
+	return c.JSON(http.StatusOK, group)
+}
+
+func (h *GroupsHandler) IsMember(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID := appMiddleware.CurrentUserID(c)
+	id := c.Param("id")
+	member := h.isMember(ctx, id, userID)
+	return c.JSON(http.StatusOK, map[string]bool{"isMember": member})
 }
 
 func (h *GroupsHandler) Balances(c echo.Context) error {

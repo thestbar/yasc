@@ -10,6 +10,8 @@ type Group struct {
 	bun.BaseModel `bun:"table:groups"`
 	ID            string    `bun:"id,pk" json:"id"`
 	Name          string    `bun:"name,notnull" json:"name"`
+	Description   *string   `bun:"description" json:"description"`
+	Currency      string    `bun:"currency,notnull" json:"currency"`
 	ImageURL      *string   `bun:"image_url" json:"imageUrl"`
 	StartDate     *string   `bun:"start_date" json:"startDate"`
 	EndDate       *string   `bun:"end_date" json:"endDate"`

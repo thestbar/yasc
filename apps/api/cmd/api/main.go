@@ -105,6 +105,7 @@ func main() {
 	protected.POST("/groups/:id/leave", groupsH.Leave)
 	protected.POST("/groups/:id/invite/regenerate", groupsH.RegenerateInvite)
 	protected.POST("/groups/join/:inviteCode", groupsH.Join)
+	protected.GET("/groups/:id/is-member", groupsH.IsMember)
 	protected.GET("/groups/:id/balances", groupsH.Balances)
 
 	protected.GET("/groups/:groupId/expenses", expensesH.List)
