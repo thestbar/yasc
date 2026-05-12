@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate, Link } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ChevronLeft } from 'lucide-react'
 import { useCreateGroup } from '../../lib/hooks/useGroups'
@@ -17,6 +18,7 @@ type Fields = z.infer<typeof schema>
 
 export function CreateGroupPage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const create = useCreateGroup()
   const { register, handleSubmit, formState: { errors } } = useForm<Fields>({
     resolver: zodResolver(schema),
@@ -26,6 +28,7 @@ export function CreateGroupPage() {
   const onSubmit = handleSubmit(async (data) => {
     try {
       const group = await create.mutateAsync(data)
+      await qc.invalidateQueries({ queryKey: ['groups'] })
       navigate(`/groups/${group.id}`)
     } catch {
       toast.error('Failed to create group')
