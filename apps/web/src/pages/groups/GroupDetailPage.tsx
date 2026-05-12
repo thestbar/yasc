@@ -57,7 +57,10 @@ export function GroupDetailPage() {
           <Link to="/groups" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
             <ChevronLeft size={20} />
           </Link>
-          <h1 className="text-xl font-bold">{group.name}</h1>
+          <div>
+            <h1 className="text-xl font-bold">{group.name}</h1>
+            <p className="text-xs text-gray-500">{group.currency}</p>
+          </div>
         </div>
         <Link to={`/groups/${id}/settings`} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
           <Settings size={20} />

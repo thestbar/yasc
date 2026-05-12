@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -40,6 +40,9 @@ export function GroupSettingsPage() {
     if (group) reset({ name: group.name, description: group.description ?? '', currency: group.currency, simplifyDebts: group.simplifyDebts })
   }, [group, reset])
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
   const isOwner = members.find((m) => m.userId === user?.id)?.role === 'owner'
 
   const onSave = handleSubmit(async (data) => {
@@ -52,7 +55,6 @@ export function GroupSettingsPage() {
   })
 
   const onDelete = async () => {
-    if (!confirm('Delete this group? This cannot be undone.')) return
     try {
       await deleteGroup.mutateAsync(id!)
       navigate('/groups')
@@ -183,12 +185,46 @@ export function GroupSettingsPage() {
             </button>
           )}
           {isOwner && (
-            <button onClick={onDelete} className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700">
+            <button onClick={() => { setDeleteConfirmText(''); setShowDeleteModal(true) }} className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700">
               <Trash2 size={16} /> Delete group
             </button>
           )}
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 w-full max-w-sm shadow-xl">
+            <h2 className="text-base font-semibold mb-1">Delete group</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              This will permanently delete <span className="font-medium text-gray-800 dark:text-gray-200">{group.name}</span> and all its expenses. Type <span className="font-mono font-bold text-red-600">DELETE</span> to confirm.
+            </p>
+            <input
+              autoFocus
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-red-500 mb-4 font-mono"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onDelete}
+                disabled={deleteConfirmText !== 'DELETE' || deleteGroup.isPending}
+                className="flex-1 bg-red-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteGroup.isPending ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
