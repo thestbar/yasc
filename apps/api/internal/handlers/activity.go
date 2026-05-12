@@ -35,7 +35,7 @@ func (h *ActivityHandler) Feed(c echo.Context) error {
 		q = q.Where("al.group_id = ?", groupID)
 	}
 
-	var logs []models.ActivityLog
+	logs := make([]models.ActivityLog, 0)
 	if err := q.Scan(ctx); err != nil {
 		return internalError(c)
 	}

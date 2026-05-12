@@ -25,7 +25,7 @@ func (h *FriendsHandler) List(c echo.Context) error {
 	ctx := c.Request().Context()
 	userID := appMiddleware.CurrentUserID(c)
 
-	var friendships []models.Friendship
+	friendships := make([]models.Friendship, 0)
 	if err := h.db.NewSelect().Model(&friendships).
 		Relation("User").Relation("Friend").
 		Where("(friendship.user_id = ? OR friendship.friend_id = ?) AND friendship.status = 'accepted'", userID, userID).
@@ -39,7 +39,7 @@ func (h *FriendsHandler) Requests(c echo.Context) error {
 	ctx := c.Request().Context()
 	userID := appMiddleware.CurrentUserID(c)
 
-	var friendships []models.Friendship
+	friendships := make([]models.Friendship, 0)
 	if err := h.db.NewSelect().Model(&friendships).
 		Relation("User").
 		Where("friendship.friend_id = ? AND friendship.status = 'pending'", userID).

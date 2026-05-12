@@ -118,7 +118,7 @@ func (h *UsersHandler) Search(c echo.Context) error {
 	userID := appMiddleware.CurrentUserID(c)
 
 	pattern := q + "%"
-	var users []models.User
+	users := make([]models.User, 0)
 	if err := h.db.NewSelect().Model(&users).
 		Where("(username ILIKE ? OR email ILIKE ?) AND id != ?", pattern, pattern, userID).
 		Limit(10).Scan(ctx); err != nil {

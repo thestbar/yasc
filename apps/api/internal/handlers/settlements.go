@@ -31,7 +31,7 @@ func (h *SettlementsHandler) List(c echo.Context) error {
 		return forbidden(c, "not a member")
 	}
 
-	var settlements []models.Settlement
+	settlements := make([]models.Settlement, 0)
 	if err := h.db.NewSelect().Model(&settlements).
 		Relation("FromUser").Relation("ToUser").
 		Where("settlement.group_id = ?", groupID).

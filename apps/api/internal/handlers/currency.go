@@ -33,7 +33,7 @@ func (h *CurrencyHandler) Rates(c echo.Context) error {
 	}
 	ctx := c.Request().Context()
 
-	var rates []models.ExchangeRate
+	rates := make([]models.ExchangeRate, 0)
 	_ = h.db.NewSelect().Model(&rates).Where("base_currency = ?", base).Scan(ctx)
 
 	stale := len(rates) == 0

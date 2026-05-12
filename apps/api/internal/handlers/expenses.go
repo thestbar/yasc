@@ -53,7 +53,7 @@ func (h *ExpensesHandler) List(c echo.Context) error {
 
 	page, limit := paginate(c)
 
-	var expenses []models.Expense
+	expenses := make([]models.Expense, 0)
 	q := h.db.NewSelect().Model(&expenses).
 		Relation("PaidBy").Relation("Splits", func(q *bun.SelectQuery) *bun.SelectQuery {
 		return q.Relation("User")
