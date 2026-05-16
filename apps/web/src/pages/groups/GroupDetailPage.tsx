@@ -89,7 +89,7 @@ export function GroupDetailPage() {
                     <span className="font-medium">{d.toUserName}</span>
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-red-500">{formatCurrency(d.amount, d.currency)}</span>
+                    <span className={`font-semibold ${d.toUserId === user?.id ? 'text-green-600' : d.fromUserId === user?.id ? 'text-red-500' : 'text-gray-600 dark:text-gray-400'}`}>{formatCurrency(d.amount, d.currency)}</span>
                     {d.fromUserId === user?.id && (
                       <button
                         onClick={() => handleSettle(d.toUserId, d.toUserName, d.amount, d.currency)}
