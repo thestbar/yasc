@@ -238,7 +238,16 @@ export function GroupSettingsPage() {
               </div>
               {isOwner && m.userId !== user?.id && (
                 <button
-                  onClick={() => removeMember.mutate({ groupId: id!, userId: m.userId })}
+                  onClick={async () => {
+                    const name = m.user?.displayName ?? m.user?.username ?? 'this member'
+                    if (!confirm(`Remove ${name} from the group?`)) return
+                    try {
+                      await removeMember.mutateAsync({ groupId: id!, userId: m.userId })
+                      toast.success(`${name} was removed from the group`)
+                    } catch (err: any) {
+                      toast.error(err?.response?.data?.message ?? 'Failed to remove member')
+                    }
+                  }}
                   className="text-red-500 hover:text-red-600 p-1"
                 >
                   <UserMinus size={16} />
