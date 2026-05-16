@@ -17,6 +17,7 @@ const schema = z.object({
   description: z.string().max(500).optional(),
   currency: z.string(),
   simplifyDebts: z.boolean(),
+  consolidateCurrencies: z.boolean(),
 })
 type Fields = z.infer<typeof schema>
 
@@ -37,7 +38,7 @@ export function GroupSettingsPage() {
   })
 
   useEffect(() => {
-    if (group) reset({ name: group.name, description: group.description ?? '', currency: group.currency, simplifyDebts: group.simplifyDebts })
+    if (group) reset({ name: group.name, description: group.description ?? '', currency: group.currency, simplifyDebts: group.simplifyDebts, consolidateCurrencies: group.consolidateCurrencies })
   }, [group, reset])
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -123,7 +124,17 @@ export function GroupSettingsPage() {
             </div>
             <label className="flex items-center gap-3 cursor-pointer">
               <input {...register('simplifyDebts')} type="checkbox" className="w-4 h-4 rounded accent-brand-600" />
-              <p className="text-sm font-medium">Simplify debts</p>
+              <div>
+                <p className="text-sm font-medium">Simplify debts</p>
+                <p className="text-xs text-gray-500">Reduce the number of transactions needed to settle up</p>
+              </div>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input {...register('consolidateCurrencies')} type="checkbox" className="w-4 h-4 rounded accent-brand-600" />
+              <div>
+                <p className="text-sm font-medium">Auto-convert currencies</p>
+                <p className="text-xs text-gray-500">Automatically convert expenses in other currencies to {group.currency} using live exchange rates</p>
+              </div>
             </label>
             <button type="submit" disabled={!isDirty || update.isPending} className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50">
               {update.isPending ? 'Saving…' : 'Save changes'}

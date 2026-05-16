@@ -19,6 +19,9 @@ export interface Expense {
   description: string
   amount: number
   currency: string
+  originalCurrency: string | null
+  originalAmount: number | null
+  exchangeRate: number | null
   date: string
   category: ExpenseCategory
   paidById: string

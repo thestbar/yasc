@@ -8,11 +8,13 @@ import { ChevronLeft } from 'lucide-react'
 import { useGroup, useGroupMembers } from '../../lib/hooks/useGroups'
 import { useCreateExpense } from '../../lib/hooks/useExpenses'
 import { useAuthStore } from '../../lib/store/auth'
+import { CURRENCIES } from '@yasc/utils'
 import type { SplitType } from '@yasc/types'
 
 const schema = z.object({
   description: z.string().min(1, 'Description is required').max(200),
   amount: z.number({ invalid_type_error: 'Enter a valid amount' }).positive('Must be positive'),
+  currency: z.string().min(1),
   paidById: z.string().min(1, 'Payer is required'),
   category: z.string().default('other'),
   date: z.string().min(1),
@@ -33,20 +35,24 @@ export function AddExpensePage() {
   const [splitType, setSplitType] = useState<SplitType>('equal')
   const [splits, setSplits] = useState<Record<string, string>>({})
 
-  const { register, handleSubmit, formState: { errors } } = useForm<Fields>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<Fields>({
     resolver: zodResolver(schema),
     defaultValues: {
       paidById: user?.id ?? '',
       date: new Date().toISOString().slice(0, 10),
       category: 'other',
+      currency: group?.currency ?? 'USD',
     },
   })
+
+  const selectedCurrency = watch('currency')
+  const isConverted = group && selectedCurrency && selectedCurrency !== group.currency && group.consolidateCurrencies
 
   const onSubmit = handleSubmit(async (data) => {
     const amountCents = Math.round(data.amount * 100)
     const memberIds = members.map((m) => m.userId)
 
-    let splitInputs: { userId: string; amount: number }[]
+    let splitInputs: { userId: string; amount: number; percentage?: number; shares?: number }[]
     if (splitType === 'equal') {
       const perPerson = Math.floor(amountCents / memberIds.length)
       const remainder = amountCents % memberIds.length
@@ -76,7 +82,7 @@ export function AddExpensePage() {
         groupId: id!,
         description: data.description,
         amount: amountCents,
-        currency: group?.currency ?? 'USD',
+        currency: data.currency,
         paidById: data.paidById,
         category: data.category,
         date: data.date,
@@ -111,7 +117,7 @@ export function AddExpensePage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Amount ({group.currency})</label>
+              <label className="block text-sm font-medium mb-1">Amount</label>
               <input
                 {...register('amount', { valueAsNumber: true })}
                 type="number" step="0.01" min="0.01" placeholder="0.00"
@@ -120,8 +126,29 @@ export function AddExpensePage() {
               {errors.amount && <p className="text-xs text-red-500 mt-1">{errors.amount.message}</p>}
             </div>
             <div>
+              <label className="block text-sm font-medium mb-1">Currency</label>
+              <select {...register('currency')} className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {isConverted && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
+              This expense will be auto-converted to <strong>{group.currency}</strong> using the current exchange rate and stored with the original {selectedCurrency} amount for reference.
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
               <label className="block text-sm font-medium mb-1">Date</label>
               <input {...register('date')} type="date" className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Category</label>
+              <select {...register('category')} className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+              </select>
             </div>
           </div>
 
@@ -131,13 +158,6 @@ export function AddExpensePage() {
               {members.map((m) => (
                 <option key={m.userId} value={m.userId}>{m.user?.displayName ?? m.user?.username}</option>
               ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Category</label>
-            <select {...register('category')} className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
             </select>
           </div>
 

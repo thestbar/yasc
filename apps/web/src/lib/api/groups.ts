@@ -6,6 +6,7 @@ export interface CreateGroupData {
   description?: string
   currency?: string
   simplifyDebts?: boolean
+  consolidateCurrencies?: boolean
 }
 
 export interface JoinPreviewResponse {
@@ -16,12 +17,25 @@ export interface JoinPreviewResponse {
   memberCount: number
 }
 
+export interface BalanceEntry {
+  userId: string
+  userName: string
+  amount: number
+  currency: string
+}
+
 export interface SimplifiedDebt {
   fromUserId: string
   fromUserName: string
   toUserId: string
   toUserName: string
   amount: number
+  currency: string
+}
+
+export interface GroupBalances {
+  balances: BalanceEntry[]
+  simplifiedDebts: SimplifiedDebt[]
 }
 
 export const groupsApi = {
@@ -59,5 +73,5 @@ export const groupsApi = {
     http.post<Group>(`/groups/join/${inviteCode}`).then((r) => r.data),
 
   balances: (id: string) =>
-    http.get<SimplifiedDebt[]>(`/groups/${id}/balances`).then((r) => r.data),
+    http.get<GroupBalances>(`/groups/${id}/balances`).then((r) => r.data),
 }

@@ -8,6 +8,7 @@ export interface Group {
   currency: string
   imageUrl: string | null
   simplifyDebts: boolean
+  consolidateCurrencies: boolean
   defaultSplit: SplitType
   inviteCode: string
   createdById: string

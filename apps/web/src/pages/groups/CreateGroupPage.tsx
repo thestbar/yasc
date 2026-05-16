@@ -13,6 +13,7 @@ const schema = z.object({
   description: z.string().max(500).optional(),
   currency: z.string().min(1),
   simplifyDebts: z.boolean(),
+  consolidateCurrencies: z.boolean(),
 })
 type Fields = z.infer<typeof schema>
 
@@ -22,7 +23,7 @@ export function CreateGroupPage() {
   const create = useCreateGroup()
   const { register, handleSubmit, formState: { errors } } = useForm<Fields>({
     resolver: zodResolver(schema),
-    defaultValues: { currency: 'USD', simplifyDebts: true },
+    defaultValues: { currency: 'USD', simplifyDebts: true, consolidateCurrencies: false },
   })
 
   const onSubmit = handleSubmit(async (data) => {
@@ -83,6 +84,14 @@ export function CreateGroupPage() {
             <div>
               <p className="text-sm font-medium">Simplify debts</p>
               <p className="text-xs text-gray-500">Reduce the number of transactions needed to settle up</p>
+            </div>
+          </label>
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input {...register('consolidateCurrencies')} type="checkbox" className="w-4 h-4 rounded accent-brand-600" />
+            <div>
+              <p className="text-sm font-medium">Auto-convert currencies</p>
+              <p className="text-xs text-gray-500">Automatically convert expenses in other currencies to the group currency using live exchange rates</p>
             </div>
           </label>
 

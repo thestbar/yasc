@@ -12,10 +12,14 @@ export function GroupDetailPage() {
   const user = useAuthStore((s) => s.user)
   const { data: group, isLoading: loadingGroup } = useGroup(id!)
   const { data: expenses = [], isLoading: loadingExpenses } = useGroupExpenses(id!)
-  const { data: balances = [] } = useGroupBalances(id!)
+  const { data: balanceData } = useGroupBalances(id!)
   const settle = useCreateSettlement()
 
-  const handleSettle = async (toUserId: string, toUserName: string, amount: number) => {
+  const simplifiedDebts = balanceData?.simplifiedDebts ?? []
+  const rawBalances = balanceData?.balances ?? []
+  const showDebts = group?.simplifyDebts ?? false
+
+  const handleSettle = async (toUserId: string, toUserName: string, amount: number, currency: string) => {
     if (!group || !user) return
     try {
       await settle.mutateAsync({
@@ -23,7 +27,7 @@ export function GroupDetailPage() {
         fromUserId: user.id,
         toUserId,
         amount,
-        currency: group.currency,
+        currency,
         date: new Date().toISOString().slice(0, 10),
       })
       toast.success(`Settled up with ${toUserName}`)
@@ -50,6 +54,8 @@ export function GroupDetailPage() {
     )
   }
 
+  const hasBalances = showDebts ? simplifiedDebts.length > 0 : rawBalances.length > 0
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-4">
@@ -68,33 +74,48 @@ export function GroupDetailPage() {
       </div>
 
       {/* Balance summary */}
-      {balances.length > 0 && (
+      {hasBalances && (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 mb-4">
           <h2 className="text-sm font-semibold mb-3">Balances</h2>
-          <div className="space-y-2">
-            {balances.map((b, i) => (
-              <div key={i} className="flex items-center justify-between text-sm">
-                <span className="text-gray-700 dark:text-gray-300">
-                  <span className="font-medium">{b.fromUserName}</span>
-                  {' owes '}
-                  <span className="font-medium">{b.toUserName}</span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-red-500">{formatCurrency(b.amount, group.currency)}</span>
-                  {b.fromUserId === user?.id && (
-                    <button
-                      onClick={() => handleSettle(b.toUserId, b.toUserName, b.amount)}
-                      disabled={settle.isPending}
-                      className="flex items-center gap-1 text-xs bg-brand-600 text-white px-2 py-1 rounded-md hover:bg-brand-700 disabled:opacity-50"
-                    >
-                      <ArrowRightLeft size={12} />
-                      Settle
-                    </button>
-                  )}
+
+          {showDebts ? (
+            <div className="space-y-2">
+              {simplifiedDebts.map((d, i) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-700 dark:text-gray-300">
+                    <span className="font-medium">{d.fromUserName}</span>
+                    {' owes '}
+                    <span className="font-medium">{d.toUserName}</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-red-500">{formatCurrency(d.amount, d.currency)}</span>
+                    {d.fromUserId === user?.id && (
+                      <button
+                        onClick={() => handleSettle(d.toUserId, d.toUserName, d.amount, d.currency)}
+                        disabled={settle.isPending}
+                        className="flex items-center gap-1 text-xs bg-brand-600 text-white px-2 py-1 rounded-md hover:bg-brand-700 disabled:opacity-50"
+                      >
+                        <ArrowRightLeft size={12} />
+                        Settle
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {rawBalances.map((b, i) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{b.userName}</span>
+                  <span className={`font-semibold ${b.amount >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    {b.amount >= 0 ? '+' : ''}{formatCurrency(Math.abs(b.amount), b.currency)}
+                    {b.currency !== group.currency && <span className="text-gray-400 ml-1 font-normal">{b.currency}</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -135,9 +156,12 @@ export function GroupDetailPage() {
                     Paid by {expense.paidBy?.displayName ?? expense.paidBy?.username} · {formatExpenseDate(expense.date)}
                   </p>
                 </div>
-                <p className="font-semibold text-sm ml-3 shrink-0">
-                  {formatCurrency(expense.amount, expense.currency)}
-                </p>
+                <div className="ml-3 shrink-0 text-right">
+                  <p className="font-semibold text-sm">{formatCurrency(expense.amount, expense.currency)}</p>
+                  {expense.originalCurrency && expense.originalCurrency !== expense.currency && (
+                    <p className="text-xs text-gray-400">{formatCurrency(expense.originalAmount!, expense.originalCurrency)}</p>
+                  )}
+                </div>
               </div>
             </Link>
           ))}

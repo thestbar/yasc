@@ -37,6 +37,8 @@ export function ExpenseDetailPage() {
 
   if (!expense) return null
 
+  const wasConverted = expense.originalCurrency && expense.originalCurrency !== expense.currency
+
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
@@ -61,6 +63,13 @@ export function ExpenseDetailPage() {
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
         <h2 className="text-lg font-semibold">{expense.description}</h2>
         <p className="text-2xl font-bold text-brand-600 mt-1">{formatCurrency(expense.amount, expense.currency)}</p>
+
+        {wasConverted && expense.originalCurrency && expense.originalAmount != null && expense.exchangeRate != null && (
+          <div className="mt-2 text-xs text-gray-500 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 space-y-0.5">
+            <p>Originally <strong>{formatCurrency(expense.originalAmount, expense.originalCurrency)}</strong></p>
+            <p>Converted at <strong>1 {expense.originalCurrency} = {expense.exchangeRate.toFixed(4)} {expense.currency}</strong></p>
+          </div>
+        )}
 
         <div className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-400">
           <div className="flex justify-between">
@@ -92,7 +101,15 @@ export function ExpenseDetailPage() {
               {expense.splits.map((split) => (
                 <div key={split.id} className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">{split.user?.displayName ?? split.user?.username}</span>
-                  <span className="font-medium">{formatCurrency(split.amount, expense.currency)}</span>
+                  <span className="font-medium">
+                    {formatCurrency(split.amount, expense.currency)}
+                    {expense.splitType === 'percentage' && split.percentage != null && (
+                      <span className="text-gray-400 ml-1">({split.percentage.toFixed(1)}%)</span>
+                    )}
+                    {expense.splitType === 'shares' && split.shares != null && (
+                      <span className="text-gray-400 ml-1">({split.shares} shares)</span>
+                    )}
+                  </span>
                 </div>
               ))}
             </div>
