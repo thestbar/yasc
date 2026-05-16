@@ -114,6 +114,7 @@ func main() {
 	protected.GET("/groups/:groupId/expenses/:id", expensesH.Get)
 	protected.PATCH("/groups/:groupId/expenses/:id", expensesH.Update)
 	protected.DELETE("/groups/:groupId/expenses/:id", expensesH.Delete)
+	protected.POST("/groups/:groupId/expenses/:id/convert", expensesH.Convert)
 
 	protected.GET("/groups/:groupId/settlements", settlementsH.List)
 	protected.POST("/groups/:groupId/settlements", settlementsH.Create)

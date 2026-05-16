@@ -395,6 +395,96 @@ func (h *ExpensesHandler) Update(c echo.Context) error {
 	return c.JSON(http.StatusOK, expense)
 }
 
+type ConvertExpenseRequest struct {
+	TargetCurrency string `json:"targetCurrency"`
+}
+
+func (h *ExpensesHandler) Convert(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID := appMiddleware.CurrentUserID(c)
+	groupID := c.Param("groupId")
+	id := c.Param("id")
+
+	if !h.isMember(ctx, groupID, userID) {
+		return forbidden(c, "not a member")
+	}
+
+	var req ConvertExpenseRequest
+	if err := c.Bind(&req); err != nil || req.TargetCurrency == "" {
+		return badRequest(c, "targetCurrency is required")
+	}
+
+	expense := &models.Expense{}
+	if err := h.db.NewSelect().Model(expense).
+		Relation("PaidBy").
+		Relation("Splits", func(q *bun.SelectQuery) *bun.SelectQuery { return q.Relation("User") }).
+		Where("expense.id = ? AND expense.group_id = ?", id, groupID).Scan(ctx); err != nil {
+		return notFound(c, "expense not found")
+	}
+
+	if expense.Currency == req.TargetCurrency {
+		return c.JSON(http.StatusOK, expense)
+	}
+
+	rate, err := services.LookupExchangeRate(ctx, h.db, h.cfg.FrankfurterURL, expense.Currency, req.TargetCurrency)
+	if err != nil {
+		return badRequest(c, fmt.Sprintf("currency conversion unavailable: %v", err))
+	}
+
+	origCurrency := expense.Currency
+	origAmount := expense.Amount
+	newAmount := int64(math.Round(float64(origAmount) * rate))
+
+	totalAllocated := int64(0)
+	for i := range expense.Splits {
+		scaled := int64(math.Round(float64(expense.Splits[i].Amount) * rate))
+		totalAllocated += scaled
+		expense.Splits[i].Amount = scaled
+	}
+	if len(expense.Splits) > 0 {
+		expense.Splits[0].Amount += newAmount - totalAllocated
+	}
+
+	tx, txErr := h.db.BeginTx(ctx, nil)
+	if txErr != nil {
+		return internalError(c)
+	}
+
+	if _, err = tx.NewUpdate().Model(expense).
+		Set("amount = ?", newAmount).
+		Set("currency = ?", req.TargetCurrency).
+		Set("original_currency = ?", origCurrency).
+		Set("original_amount = ?", origAmount).
+		Set("exchange_rate = ?", rate).
+		Set("updated_at = ?", time.Now()).
+		WherePK().Exec(ctx); err != nil {
+		_ = tx.Rollback()
+		return internalError(c)
+	}
+
+	for i := range expense.Splits {
+		if _, err = tx.NewUpdate().Model(expense.Splits[i]).
+			Set("amount = ?", expense.Splits[i].Amount).
+			WherePK().Exec(ctx); err != nil {
+			_ = tx.Rollback()
+			return internalError(c)
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return internalError(c)
+	}
+
+	expense.Amount = newAmount
+	expense.Currency = req.TargetCurrency
+	expense.OriginalCurrency = &origCurrency
+	expense.OriginalAmount = &origAmount
+	expense.ExchangeRate = &rate
+
+	h.activity.LogExpenseUpdated(ctx, userID, groupID, id)
+	return c.JSON(http.StatusOK, expense)
+}
+
 func (h *ExpensesHandler) Delete(c echo.Context) error {
 	ctx := c.Request().Context()
 	userID := appMiddleware.CurrentUserID(c)

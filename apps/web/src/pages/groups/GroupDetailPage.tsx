@@ -21,6 +21,7 @@ export function GroupDetailPage() {
 
   const handleSettle = async (toUserId: string, toUserName: string, amount: number, currency: string) => {
     if (!group || !user) return
+    if (!confirm(`Record a settlement of ${formatCurrency(amount, currency)} to ${toUserName}?`)) return
     try {
       await settle.mutateAsync({
         groupId: id!,

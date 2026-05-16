@@ -41,6 +41,19 @@ export function useUpdateExpense() {
   })
 }
 
+export function useConvertExpense() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ groupId, expenseId, targetCurrency }: { groupId: string; expenseId: string; targetCurrency: string }) =>
+      expensesApi.convert(groupId, expenseId, targetCurrency),
+    onSuccess: (_, { groupId, expenseId }) => {
+      qc.invalidateQueries({ queryKey: ['expenses', groupId, expenseId] })
+      qc.invalidateQueries({ queryKey: ['expenses', groupId] })
+      qc.invalidateQueries({ queryKey: ['groups', groupId, 'balances'] })
+    },
+  })
+}
+
 export function useDeleteExpense() {
   const qc = useQueryClient()
   return useMutation({

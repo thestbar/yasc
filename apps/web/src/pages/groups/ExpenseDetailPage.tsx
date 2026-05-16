@@ -1,10 +1,11 @@
+import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Pencil, Trash2 } from 'lucide-react'
+import { ChevronLeft, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
-import { useExpense, useDeleteExpense } from '../../lib/hooks/useExpenses'
+import { useExpense, useDeleteExpense, useConvertExpense } from '../../lib/hooks/useExpenses'
 import { useGroup } from '../../lib/hooks/useGroups'
 import { useAuthStore } from '../../lib/store/auth'
-import { formatCurrency, formatExpenseDate } from '@yasc/utils'
+import { formatCurrency, formatExpenseDate, CURRENCIES } from '@yasc/utils'
 
 export function ExpenseDetailPage() {
   const { id, expenseId } = useParams<{ id: string; expenseId: string }>()
@@ -13,6 +14,10 @@ export function ExpenseDetailPage() {
   const { data: expense, isLoading } = useExpense(id!, expenseId!)
   const { data: group } = useGroup(id!)
   const deleteExpense = useDeleteExpense()
+  const convertExpense = useConvertExpense()
+
+  const [showConvertModal, setShowConvertModal] = useState(false)
+  const [convertTarget, setConvertTarget] = useState('')
 
   const canEdit = expense && (expense.createdById === user?.id || expense.paidById === user?.id)
 
@@ -23,6 +28,22 @@ export function ExpenseDetailPage() {
       navigate(`/groups/${id}`)
     } catch {
       toast.error('Failed to delete expense')
+    }
+  }
+
+  const openConvertModal = () => {
+    setConvertTarget(group?.currency ?? expense?.currency ?? 'USD')
+    setShowConvertModal(true)
+  }
+
+  const handleConvert = async () => {
+    if (!convertTarget) return
+    try {
+      await convertExpense.mutateAsync({ groupId: id!, expenseId: expenseId!, targetCurrency: convertTarget })
+      toast.success(`Converted to ${convertTarget}`)
+      setShowConvertModal(false)
+    } catch {
+      toast.error('Currency conversion failed')
     }
   }
 
@@ -50,6 +71,9 @@ export function ExpenseDetailPage() {
         </div>
         {canEdit && (
           <div className="flex gap-2">
+            <button onClick={openConvertModal} className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" title="Convert currency">
+              <RefreshCw size={18} />
+            </button>
             <Link to={`/groups/${id}/expenses/${expenseId}/edit`} className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
               <Pencil size={18} />
             </Link>
@@ -116,6 +140,43 @@ export function ExpenseDetailPage() {
           </div>
         )}
       </div>
+      {showConvertModal && expense && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 w-full max-w-sm space-y-4">
+            <h2 className="text-base font-semibold">Convert currency</h2>
+            <p className="text-sm text-gray-500">
+              Currently <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(expense.amount, expense.currency)}</span>
+            </p>
+            <div>
+              <label className="block text-sm font-medium mb-1">Convert to</label>
+              <select
+                value={convertTarget}
+                onChange={(e) => setConvertTarget(e.target.value)}
+                className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConvertModal(false)}
+                className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConvert}
+                disabled={convertExpense.isPending || convertTarget === expense.currency}
+                className="flex-1 bg-brand-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
+              >
+                {convertExpense.isPending ? 'Converting…' : 'Convert'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
