@@ -180,17 +180,17 @@ export function ExpenseDetailPage() {
                   <p className="text-red-500 text-xs">Rate unavailable for this currency pair</p>
                 ) : preview ? (
                   <>
-                    <div className="flex justify-between text-gray-500">
-                      <span>Exchange rate</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                    <div>
+                      <p className="text-xs text-gray-500">Exchange rate</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         1 {preview.from} = {preview.rate.toFixed(6)} {preview.to}
-                      </span>
+                      </p>
                     </div>
-                    <div className="flex justify-between text-gray-500">
-                      <span>Converted amount</span>
-                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    <div>
+                      <p className="text-xs text-gray-500">Converted amount</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">
                         {formatCurrency(preview.convertedAmount, preview.to)}
-                      </span>
+                      </p>
                     </div>
                   </>
                 ) : null}

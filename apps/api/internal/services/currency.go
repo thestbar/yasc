@@ -13,9 +13,11 @@ import (
 	"github.com/uptrace/bun"
 )
 
+var httpClient = &http.Client{Timeout: 10 * time.Second}
+
 func fetchFrankfurter(baseURL, from, to string) (float64, error) {
 	url := fmt.Sprintf("%s/latest?from=%s&to=%s", baseURL, from, to)
-	resp, err := http.Get(url) //nolint:gosec
+	resp, err := httpClient.Get(url) //nolint:gosec
 	if err != nil {
 		return 0, err
 	}
@@ -37,7 +39,7 @@ func fetchFrankfurter(baseURL, from, to string) (float64, error) {
 
 func fetchOpenER(from, to string) (float64, error) {
 	url := fmt.Sprintf("https://open.er-api.com/v6/latest/%s", from)
-	resp, err := http.Get(url) //nolint:gosec
+	resp, err := httpClient.Get(url) //nolint:gosec
 	if err != nil {
 		return 0, err
 	}
