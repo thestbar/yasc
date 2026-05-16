@@ -283,6 +283,28 @@ func (h *GroupsHandler) AddMember(c echo.Context) error {
 	return c.JSON(http.StatusCreated, member)
 }
 
+func (h *GroupsHandler) hasUnsettledBalance(ctx context.Context, groupID, userID string) (bool, error) {
+	expenses := make([]*models.Expense, 0)
+	if err := h.db.NewSelect().Model(&expenses).
+		Relation("Splits").
+		Where("expense.group_id = ?", groupID).
+		Scan(ctx); err != nil {
+		return false, err
+	}
+	settlements := make([]*models.Settlement, 0)
+	if err := h.db.NewSelect().Model(&settlements).
+		Where("group_id = ?", groupID).
+		Scan(ctx); err != nil {
+		return false, err
+	}
+	for _, b := range services.CalculateGroupBalances(expenses, settlements) {
+		if b.UserID == userID && b.Amount != 0 {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (h *GroupsHandler) RemoveMember(c echo.Context) error {
 	ctx := c.Request().Context()
 	userID := appMiddleware.CurrentUserID(c)
@@ -291,6 +313,14 @@ func (h *GroupsHandler) RemoveMember(c echo.Context) error {
 
 	if !h.isOwner(ctx, groupID, userID) {
 		return forbidden(c, "only the owner can remove members")
+	}
+
+	unsettled, err := h.hasUnsettledBalance(ctx, groupID, targetUserID)
+	if err != nil {
+		return internalError(c)
+	}
+	if unsettled {
+		return badRequest(c, "this member has an unsettled balance and cannot be removed")
 	}
 
 	_, _ = h.db.NewDelete().Model((*models.GroupMember)(nil)).
@@ -306,6 +336,14 @@ func (h *GroupsHandler) Leave(c echo.Context) error {
 
 	if h.isOwner(ctx, id, userID) {
 		return badRequest(c, "owner cannot leave; transfer ownership or delete the group")
+	}
+
+	unsettled, err := h.hasUnsettledBalance(ctx, id, userID)
+	if err != nil {
+		return internalError(c)
+	}
+	if unsettled {
+		return badRequest(c, "you have an unsettled balance and cannot leave the group")
 	}
 
 	_, _ = h.db.NewDelete().Model((*models.GroupMember)(nil)).
