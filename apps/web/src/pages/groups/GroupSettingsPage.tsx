@@ -183,24 +183,22 @@ export function GroupSettingsPage() {
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-4">
         <h2 className="text-sm font-semibold mb-3">Members</h2>
 
-        {isOwner && (
-          <form onSubmit={onAddMember} className="flex gap-2 mb-4">
-            <input
-              value={addQuery}
-              onChange={(e) => setAddQuery(e.target.value)}
-              placeholder="Username or email"
-              className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
-            <button
-              type="submit"
-              disabled={!addQuery.trim() || addMember.isPending}
-              className="flex items-center gap-1.5 bg-brand-600 text-white rounded-lg px-3 py-2 text-sm font-medium hover:bg-brand-700 disabled:opacity-50 shrink-0"
-            >
-              <UserPlus size={15} />
-              Add
-            </button>
-          </form>
-        )}
+        <form onSubmit={onAddMember} className="flex gap-2 mb-4">
+          <input
+            value={addQuery}
+            onChange={(e) => setAddQuery(e.target.value)}
+            placeholder="Username or email"
+            className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          <button
+            type="submit"
+            disabled={!addQuery.trim() || addMember.isPending}
+            className="flex items-center gap-1.5 bg-brand-600 text-white rounded-lg px-3 py-2 text-sm font-medium hover:bg-brand-700 disabled:opacity-50 shrink-0"
+          >
+            <UserPlus size={15} />
+            Add
+          </button>
+        </form>
 
         <div className="space-y-2">
           {members.map((m) => (
