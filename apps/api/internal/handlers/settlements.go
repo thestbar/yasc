@@ -94,7 +94,11 @@ func (h *SettlementsHandler) Create(c echo.Context) error {
 		return internalError(c)
 	}
 
-	h.activity.LogSettlementCreated(ctx, userID, groupID, settlement.ID)
+	fromUser := &models.User{}
+	toUser := &models.User{}
+	_ = h.db.NewSelect().Model(fromUser).Where("id = ?", body.FromUserID).Scan(ctx)
+	_ = h.db.NewSelect().Model(toUser).Where("id = ?", body.ToUserID).Scan(ctx)
+	h.activity.LogSettlementCreated(ctx, userID, groupID, settlement.ID, body.FromUserID, fromUser.DisplayName, body.ToUserID, toUser.DisplayName, body.Amount, body.Currency)
 	return c.JSON(http.StatusCreated, settlement)
 }
 
@@ -108,8 +112,19 @@ func (h *SettlementsHandler) Delete(c echo.Context) error {
 		return forbidden(c, "not a member")
 	}
 
+	s := &models.Settlement{}
+	if err := h.db.NewSelect().Model(s).Where("id = ? AND group_id = ?", id, groupID).Scan(ctx); err != nil {
+		return notFound(c, "settlement not found")
+	}
+
+	fromUser := &models.User{}
+	toUser := &models.User{}
+	_ = h.db.NewSelect().Model(fromUser).Where("id = ?", s.FromUserID).Scan(ctx)
+	_ = h.db.NewSelect().Model(toUser).Where("id = ?", s.ToUserID).Scan(ctx)
+
 	_, _ = h.db.NewDelete().Model((*models.Settlement)(nil)).
 		Where("id = ? AND group_id = ?", id, groupID).Exec(ctx)
+	h.activity.LogSettlementDeleted(ctx, userID, groupID, s.FromUserID, fromUser.DisplayName, s.ToUserID, toUser.DisplayName, s.Amount, s.Currency)
 	return c.JSON(http.StatusOK, map[string]bool{"ok": true})
 }
 

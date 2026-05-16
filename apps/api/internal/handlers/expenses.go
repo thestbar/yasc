@@ -231,7 +231,15 @@ func (h *ExpensesHandler) Create(c echo.Context) error {
 		return internalError(c)
 	}
 
-	h.activity.LogExpenseCreated(ctx, userID, groupID, expense.ID)
+	affectedIDs := make([]string, 0, len(finalInputs)+1)
+	affectedIDs = append(affectedIDs, req.PaidByID)
+	for _, inp := range finalInputs {
+		if inp.UserID != req.PaidByID {
+			affectedIDs = append(affectedIDs, inp.UserID)
+		}
+	}
+	names := h.userNames(ctx, affectedIDs)
+	h.activity.LogExpenseCreated(ctx, userID, groupID, expense.ID, expense.Description, expense.Amount, expense.Currency, req.PaidByID, names[req.PaidByID], h.buildSplitsMeta(req.PaidByID, finalInputs, names), affectedIDs)
 	return c.JSON(http.StatusCreated, expense)
 }
 
@@ -391,7 +399,15 @@ func (h *ExpensesHandler) Update(c echo.Context) error {
 	if err = tx.Commit(); err != nil {
 		return internalError(c)
 	}
-	h.activity.LogExpenseUpdated(ctx, userID, groupID, id)
+	updatedAffectedIDs := make([]string, 0, len(finalInputs)+1)
+	updatedAffectedIDs = append(updatedAffectedIDs, req.PaidByID)
+	for _, inp := range finalInputs {
+		if inp.UserID != req.PaidByID {
+			updatedAffectedIDs = append(updatedAffectedIDs, inp.UserID)
+		}
+	}
+	updatedNames := h.userNames(ctx, updatedAffectedIDs)
+	h.activity.LogExpenseUpdated(ctx, userID, groupID, id, req.Description, req.Amount, req.Currency, req.PaidByID, updatedNames[req.PaidByID], h.buildSplitsMeta(req.PaidByID, finalInputs, updatedNames), updatedAffectedIDs)
 	return c.JSON(http.StatusOK, expense)
 }
 
@@ -525,7 +541,19 @@ func (h *ExpensesHandler) Convert(c echo.Context) error {
 	expense.OriginalAmount = &origAmount
 	expense.ExchangeRate = &rate
 
-	h.activity.LogExpenseUpdated(ctx, userID, groupID, id)
+	convertAffectedIDs := make([]string, 0, len(expense.Splits)+1)
+	convertAffectedIDs = append(convertAffectedIDs, expense.PaidByID)
+	for _, s := range expense.Splits {
+		if s.UserID != expense.PaidByID {
+			convertAffectedIDs = append(convertAffectedIDs, s.UserID)
+		}
+	}
+	convertNames := h.userNames(ctx, convertAffectedIDs)
+	convertSplitInputs := make([]services.SplitInput, len(expense.Splits))
+	for i, s := range expense.Splits {
+		convertSplitInputs[i] = services.SplitInput{UserID: s.UserID, Amount: s.Amount}
+	}
+	h.activity.LogExpenseUpdated(ctx, userID, groupID, id, expense.Description, newAmount, req.TargetCurrency, expense.PaidByID, convertNames[expense.PaidByID], h.buildSplitsMeta(expense.PaidByID, convertSplitInputs, convertNames), convertAffectedIDs)
 	return c.JSON(http.StatusOK, expense)
 }
 
@@ -536,15 +564,27 @@ func (h *ExpensesHandler) Delete(c echo.Context) error {
 	id := c.Param("id")
 
 	expense := &models.Expense{}
-	if err := h.db.NewSelect().Model(expense).Where("id = ? AND group_id = ?", id, groupID).Scan(ctx); err != nil {
+	if err := h.db.NewSelect().Model(expense).Relation("Splits").Where("expense.id = ? AND expense.group_id = ?", id, groupID).Scan(ctx); err != nil {
 		return notFound(c, "expense not found")
 	}
 	if expense.CreatedByID != userID && !h.isOwner(ctx, groupID, userID) {
 		return forbidden(c, "only the creator or group owner can delete")
 	}
 
+	deleteAffectedIDs := make([]string, 0, len(expense.Splits)+1)
+	deleteAffectedIDs = append(deleteAffectedIDs, expense.PaidByID)
+	for _, s := range expense.Splits {
+		if s.UserID != expense.PaidByID {
+			deleteAffectedIDs = append(deleteAffectedIDs, s.UserID)
+		}
+	}
+
 	_, _ = h.db.NewDelete().Model(expense).WherePK().Exec(ctx)
-	h.activity.LogExpenseDeleted(ctx, userID, groupID, map[string]any{"description": expense.Description, "amount": expense.Amount})
+	h.activity.LogExpenseDeleted(ctx, userID, groupID, deleteAffectedIDs, map[string]any{
+		"description": expense.Description,
+		"amount":      expense.Amount,
+		"currency":    expense.Currency,
+	})
 	return c.JSON(http.StatusOK, map[string]bool{"ok": true})
 }
 
@@ -686,11 +726,39 @@ func (h *ExpensesHandler) ConvertAll(c echo.Context) error {
 			WherePK().Exec(ctx)
 	}
 
+	h.activity.LogExpensesConverted(ctx, userID, groupID, group.Currency, converted, skipped)
 	return c.JSON(http.StatusOK, map[string]any{
 		"converted": converted,
 		"skipped":   skipped,
 		"total":     len(expenses),
 	})
+}
+
+func (h *ExpensesHandler) userNames(ctx context.Context, ids []string) map[string]string {
+	if len(ids) == 0 {
+		return map[string]string{}
+	}
+	users := make([]models.User, 0, len(ids))
+	_ = h.db.NewSelect().Model(&users).Where("id IN (?)", bun.In(ids)).Scan(ctx)
+	m := make(map[string]string, len(users))
+	for _, u := range users {
+		m[u.ID] = u.DisplayName
+	}
+	return m
+}
+
+func (h *ExpensesHandler) buildSplitsMeta(paidByID string, inputs []services.SplitInput, names map[string]string) []services.SplitMeta {
+	splits := make([]services.SplitMeta, 0, len(inputs))
+	for _, inp := range inputs {
+		if inp.UserID != paidByID {
+			splits = append(splits, services.SplitMeta{
+				UserID: inp.UserID,
+				Name:   names[inp.UserID],
+				Amount: inp.Amount,
+			})
+		}
+	}
+	return splits
 }
 
 func (h *ExpensesHandler) isMember(ctx context.Context, groupID, userID string) bool {

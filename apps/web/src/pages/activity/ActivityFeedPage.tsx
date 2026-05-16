@@ -3,19 +3,80 @@ import { useActivity } from '../../lib/hooks/useActivity'
 import { formatRelativeTime } from '@yasc/utils'
 import type { ActivityItem } from '@yasc/types'
 
+function fmt(amount: unknown, currency: unknown): string {
+  if (typeof amount !== 'number' || typeof currency !== 'string') return ''
+  return (amount / 100).toLocaleString(undefined, { style: 'currency', currency, minimumFractionDigits: 2 })
+}
+
 function activityText(item: ActivityItem): string {
   const actor = item.actor?.displayName ?? item.actor?.username ?? 'Someone'
-  const group = item.group?.name ? ` in ${item.group.name}` : ''
+  const inGroup = item.group?.name ? ` in ${item.group.name}` : ''
+  const toGroup = item.group?.name ? ` to ${item.group.name}` : ' to the group'
+  const fromGroup = item.group?.name ? ` from ${item.group.name}` : ' from the group'
+  const groupName = item.group?.name ?? ''
+  const meta = item.metadata ?? {}
+
   switch (item.type) {
-    case 'expense_added': return `${actor} added an expense${group}`
-    case 'expense_updated': return `${actor} updated an expense${group}`
-    case 'expense_deleted': return `${actor} deleted an expense${group}`
-    case 'settlement_recorded': return `${actor} recorded a settlement${group}`
-    case 'member_joined': return `${actor} joined${group}`
-    case 'member_left': return `${actor} left${group}`
-    case 'group_created': return `${actor} created a group`
-    case 'group_updated': return `${actor} updated${group}`
-    default: return `${actor} did something${group}`
+    case 'expense_added':
+    case 'expense_updated': {
+      const verb = item.type === 'expense_added' ? 'added' : 'updated'
+      const desc = typeof meta.description === 'string' && meta.description ? ` "${meta.description}"` : ''
+      const total = fmt(meta.amount, meta.currency)
+      const payer = typeof meta.paidByName === 'string' ? meta.paidByName : null
+      const splits = Array.isArray(meta.splits) ? meta.splits as Array<{ name: string; amount: number }> : []
+      const splitStr = splits.map(s => `${s.name} owes ${fmt(s.amount, meta.currency)}`).join(', ')
+      const detail = payer
+        ? ` — ${payer} paid${total ? ' ' + total : ''}${splitStr ? '; ' + splitStr : ''}`
+        : total ? ` ${total}` : ''
+      return `${actor} ${verb} expense${desc}${detail}${inGroup}`
+    }
+    case 'expense_deleted': {
+      const desc = typeof meta.description === 'string' && meta.description ? ` "${meta.description}"` : ''
+      const total = fmt(meta.amount, meta.currency)
+      return `${actor} deleted expense${desc}${total ? ' ' + total : ''}${inGroup}`
+    }
+    case 'settlement_recorded': {
+      const from = typeof meta.fromUserName === 'string' ? meta.fromUserName : null
+      const to = typeof meta.toUserName === 'string' ? meta.toUserName : null
+      const total = fmt(meta.amount, meta.currency)
+      const detail = from && to ? ` — ${from} paid ${to}${total ? ' ' + total : ''}` : ''
+      return `${actor} recorded a settlement${detail}${inGroup}`
+    }
+    case 'settlement_deleted': {
+      const from = typeof meta.fromUserName === 'string' ? meta.fromUserName : null
+      const to = typeof meta.toUserName === 'string' ? meta.toUserName : null
+      const total = fmt(meta.amount, meta.currency)
+      const detail = from && to ? ` — ${from} paid ${to}${total ? ' ' + total : ''}` : ''
+      return `${actor} deleted a settlement${detail}${inGroup}`
+    }
+    case 'expenses_converted': {
+      const currency = typeof meta.targetCurrency === 'string' ? meta.targetCurrency : ''
+      const count = typeof meta.converted === 'number' ? meta.converted : null
+      const countStr = count !== null ? ` (${count} expense${count !== 1 ? 's' : ''})` : ''
+      return `${actor} converted all expenses to ${currency}${countStr}${inGroup}`
+    }
+    case 'member_joined':
+      return groupName ? `${actor} joined ${groupName}` : `${actor} joined the group`
+    case 'member_added': {
+      const added = typeof meta.addedUserName === 'string' ? meta.addedUserName : 'a user'
+      return `${actor} added ${added}${toGroup}`
+    }
+    case 'member_left':
+      return groupName ? `${actor} left ${groupName}` : `${actor} left the group`
+    case 'member_removed': {
+      const removed = typeof meta.removedUserName === 'string' ? meta.removedUserName : 'a member'
+      return `${actor} removed ${removed}${fromGroup}`
+    }
+    case 'group_created':
+      return groupName ? `${actor} created ${groupName}` : `${actor} created the group`
+    case 'group_updated': {
+      const fields = Array.isArray(meta.changedFields) && meta.changedFields.length > 0
+        ? ` (${(meta.changedFields as string[]).join(', ')})`
+        : ''
+      return `${actor} updated group settings${fields}${inGroup}`
+    }
+    default:
+      return `${actor} did something${group}`
   }
 }
 

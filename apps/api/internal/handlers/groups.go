@@ -154,36 +154,71 @@ func (h *GroupsHandler) Update(c echo.Context) error {
 		return badRequest(c, "invalid request body")
 	}
 
+	current := &models.Group{}
+	if err := h.db.NewSelect().Model(current).Where("id = ?", id).Scan(ctx); err != nil {
+		return internalError(c)
+	}
+
+	changed := make([]string, 0)
 	q := h.db.NewUpdate().Model((*models.Group)(nil)).Where("id = ?", id).Set("updated_at = ?", time.Now())
 	if body.Name != nil {
 		q = q.Set("name = ?", *body.Name)
+		if *body.Name != current.Name {
+			changed = append(changed, "name")
+		}
 	}
 	if body.Description != nil {
 		q = q.Set("description = ?", *body.Description)
+		descChanged := current.Description == nil || *body.Description != *current.Description
+		if descChanged {
+			changed = append(changed, "description")
+		}
 	}
 	if body.Currency != nil {
 		q = q.Set("currency = ?", *body.Currency)
+		if *body.Currency != current.Currency {
+			changed = append(changed, "currency")
+		}
 	}
 	if body.ImageURL != nil {
 		q = q.Set("image_url = ?", *body.ImageURL)
+		imageChanged := current.ImageURL == nil || *body.ImageURL != *current.ImageURL
+		if imageChanged {
+			changed = append(changed, "image")
+		}
 	}
 	if body.MaxMembers != nil {
 		q = q.Set("max_members = ?", *body.MaxMembers)
+		maxChanged := current.MaxMembers == nil || *body.MaxMembers != *current.MaxMembers
+		if maxChanged {
+			changed = append(changed, "max members")
+		}
 	}
 	if body.SimplifyDebts != nil {
 		q = q.Set("simplify_debts = ?", *body.SimplifyDebts)
+		if *body.SimplifyDebts != current.SimplifyDebts {
+			changed = append(changed, "simplify debts")
+		}
 	}
 	if body.DefaultSplit != nil {
 		q = q.Set("default_split = ?", *body.DefaultSplit)
+		if *body.DefaultSplit != current.DefaultSplit {
+			changed = append(changed, "default split")
+		}
 	}
 	if body.ConsolidateCurrencies != nil {
 		q = q.Set("consolidate_currencies = ?", *body.ConsolidateCurrencies)
+		if *body.ConsolidateCurrencies != current.ConsolidateCurrencies {
+			changed = append(changed, "consolidate currencies")
+		}
 	}
 	if _, err := q.Exec(ctx); err != nil {
 		return internalError(c)
 	}
 
-	h.activity.LogGroupUpdated(ctx, userID, id)
+	if len(changed) > 0 {
+		h.activity.LogGroupUpdated(ctx, userID, id, changed)
+	}
 
 	group := &models.Group{}
 	_ = h.db.NewSelect().Model(group).Where("id = ?", id).Scan(ctx)
@@ -197,6 +232,16 @@ func (h *GroupsHandler) Delete(c echo.Context) error {
 
 	if !h.isOwner(ctx, id, userID) {
 		return forbidden(c, "only the group owner can delete")
+	}
+
+	expenses := make([]*models.Expense, 0)
+	_ = h.db.NewSelect().Model(&expenses).Relation("Splits").Where("expense.group_id = ?", id).Scan(ctx)
+	settlements := make([]*models.Settlement, 0)
+	_ = h.db.NewSelect().Model(&settlements).Where("group_id = ?", id).Scan(ctx)
+	for _, b := range services.CalculateGroupBalances(expenses, settlements) {
+		if b.Amount != 0 {
+			return badRequest(c, "the group has unsettled balances; settle all debts before deleting")
+		}
 	}
 
 	_, _ = h.db.NewDelete().Model((*models.Group)(nil)).Where("id = ?", id).Exec(ctx)
@@ -279,7 +324,8 @@ func (h *GroupsHandler) AddMember(c echo.Context) error {
 	if _, err := h.db.NewInsert().Model(member).Exec(ctx); err != nil {
 		return internalError(c)
 	}
-	h.activity.LogMemberJoined(ctx, target.ID, id)
+
+	h.activity.LogMemberAdded(ctx, userID, id, target.ID, target.DisplayName)
 	return c.JSON(http.StatusCreated, member)
 }
 
@@ -323,9 +369,12 @@ func (h *GroupsHandler) RemoveMember(c echo.Context) error {
 		return badRequest(c, "this member has an unsettled balance and cannot be removed")
 	}
 
+	targetUser := &models.User{}
+	_ = h.db.NewSelect().Model(targetUser).Where("id = ?", targetUserID).Scan(ctx)
+
 	_, _ = h.db.NewDelete().Model((*models.GroupMember)(nil)).
 		Where("group_id = ? AND user_id = ?", groupID, targetUserID).Exec(ctx)
-	h.activity.LogMemberLeft(ctx, targetUserID, groupID)
+	h.activity.LogMemberRemoved(ctx, userID, groupID, targetUserID, targetUser.DisplayName)
 	return c.JSON(http.StatusOK, map[string]bool{"ok": true})
 }
 

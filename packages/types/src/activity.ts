@@ -5,9 +5,13 @@ export type ActivityType =
   | 'expense_added'
   | 'expense_updated'
   | 'expense_deleted'
+  | 'expenses_converted'
   | 'settlement_recorded'
+  | 'settlement_deleted'
   | 'member_joined'
+  | 'member_added'
   | 'member_left'
+  | 'member_removed'
   | 'group_created'
   | 'group_updated'
 
