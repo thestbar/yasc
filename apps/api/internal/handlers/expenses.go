@@ -668,6 +668,24 @@ func (h *ExpensesHandler) ConvertAll(c echo.Context) error {
 		converted++
 	}
 
+	// Convert settlements in non-group currencies so they don't create phantom balances
+	var settlementsToConvert []*models.Settlement
+	_ = h.db.NewSelect().Model(&settlementsToConvert).
+		Where("group_id = ? AND currency != ?", groupID, group.Currency).
+		Scan(ctx)
+
+	for _, s := range settlementsToConvert {
+		rate, rateErr := services.LookupExchangeRate(ctx, h.db, h.cfg.FrankfurterURL, s.Currency, group.Currency)
+		if rateErr != nil {
+			continue
+		}
+		newAmt := int64(math.Round(float64(s.Amount) * rate))
+		_, _ = h.db.NewUpdate().Model(s).
+			Set("amount = ?", newAmt).
+			Set("currency = ?", group.Currency).
+			WherePK().Exec(ctx)
+	}
+
 	return c.JSON(http.StatusOK, map[string]any{
 		"converted": converted,
 		"skipped":   skipped,
