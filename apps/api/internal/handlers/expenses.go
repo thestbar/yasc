@@ -566,7 +566,7 @@ func (h *ExpensesHandler) ConvertAllPreview(c echo.Context) error {
 		Currency string `json:"currency"`
 		Count    int    `json:"count"`
 	}
-	var rows []row
+	rows := make([]row, 0)
 	if err := h.db.NewSelect().
 		TableExpr("expenses").
 		ColumnExpr("currency, COUNT(*) AS count").

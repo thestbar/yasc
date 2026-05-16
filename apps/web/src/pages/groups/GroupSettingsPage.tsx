@@ -286,7 +286,7 @@ export function GroupSettingsPage() {
 
             {previewLoading ? (
               <div className="h-12 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
-            ) : convertAllPreview && convertAllPreview.breakdown.length > 0 ? (
+            ) : convertAllPreview && convertAllPreview.breakdown?.length > 0 ? (
               <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 space-y-1.5">
                 <p className="text-xs font-medium text-gray-500 mb-2">Expenses to convert</p>
                 {convertAllPreview.breakdown.map((row) => (
@@ -296,7 +296,7 @@ export function GroupSettingsPage() {
                   </div>
                 ))}
               </div>
-            ) : convertAllPreview?.breakdown.length === 0 ? (
+            ) : convertAllPreview?.breakdown?.length === 0 ? (
               <p className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3">
                 All expenses are already in {group.currency}. Nothing to convert.
               </p>
@@ -311,7 +311,7 @@ export function GroupSettingsPage() {
               </button>
               <button
                 onClick={onConvertAll}
-                disabled={convertAll.isPending || previewLoading || convertAllPreview?.breakdown.length === 0}
+                disabled={convertAll.isPending || previewLoading || convertAllPreview?.breakdown?.length === 0}
                 className="flex-1 bg-brand-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
               >
                 {convertAll.isPending ? 'Converting…' : 'Confirm'}
