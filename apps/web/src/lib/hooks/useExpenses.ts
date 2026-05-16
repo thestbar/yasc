@@ -41,6 +41,15 @@ export function useUpdateExpense() {
   })
 }
 
+export function useConvertPreview(groupId: string, expenseId: string, targetCurrency: string) {
+  return useQuery({
+    queryKey: ['expenses', groupId, expenseId, 'convert-preview', targetCurrency],
+    queryFn: () => expensesApi.convertPreview(groupId, expenseId, targetCurrency),
+    enabled: !!groupId && !!expenseId && !!targetCurrency,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
 export function useConvertExpense() {
   const qc = useQueryClient()
   return useMutation({

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
-import { useExpense, useDeleteExpense, useConvertExpense } from '../../lib/hooks/useExpenses'
+import { useExpense, useDeleteExpense, useConvertExpense, useConvertPreview } from '../../lib/hooks/useExpenses'
 import { useGroup } from '../../lib/hooks/useGroups'
 import { useAuthStore } from '../../lib/store/auth'
 import { formatCurrency, formatExpenseDate, CURRENCIES } from '@yasc/utils'
@@ -18,6 +18,12 @@ export function ExpenseDetailPage() {
 
   const [showConvertModal, setShowConvertModal] = useState(false)
   const [convertTarget, setConvertTarget] = useState('')
+
+  const { data: preview, isFetching: previewLoading, error: previewError } = useConvertPreview(
+    showConvertModal ? id! : '',
+    showConvertModal ? expenseId! : '',
+    showConvertModal && convertTarget !== expense?.currency ? convertTarget : '',
+  )
 
   const canEdit = expense && (expense.createdById === user?.id || expense.paidById === user?.id)
 
@@ -37,13 +43,13 @@ export function ExpenseDetailPage() {
   }
 
   const handleConvert = async () => {
-    if (!convertTarget) return
+    if (!convertTarget || !preview) return
     try {
       await convertExpense.mutateAsync({ groupId: id!, expenseId: expenseId!, targetCurrency: convertTarget })
       toast.success(`Converted to ${convertTarget}`)
       setShowConvertModal(false)
-    } catch {
-      toast.error('Currency conversion failed')
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Currency conversion failed')
     }
   }
 
@@ -59,6 +65,7 @@ export function ExpenseDetailPage() {
   if (!expense) return null
 
   const wasConverted = expense.originalCurrency && expense.originalCurrency !== expense.currency
+  const sameAsCurrent = convertTarget === expense.currency
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
@@ -140,13 +147,17 @@ export function ExpenseDetailPage() {
           </div>
         )}
       </div>
-      {showConvertModal && expense && (
+
+      {showConvertModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 w-full max-w-sm space-y-4">
             <h2 className="text-base font-semibold">Convert currency</h2>
-            <p className="text-sm text-gray-500">
-              Currently <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(expense.amount, expense.currency)}</span>
-            </p>
+
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Current amount</p>
+              <p className="text-sm font-semibold">{formatCurrency(expense.amount, expense.currency)}</p>
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-1">Convert to</label>
               <select
@@ -159,6 +170,37 @@ export function ExpenseDetailPage() {
                 ))}
               </select>
             </div>
+
+            {/* Preview */}
+            {!sameAsCurrent && (
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm space-y-1.5">
+                {previewLoading ? (
+                  <p className="text-gray-400 text-xs">Fetching rate…</p>
+                ) : previewError ? (
+                  <p className="text-red-500 text-xs">Rate unavailable for this currency pair</p>
+                ) : preview ? (
+                  <>
+                    <div className="flex justify-between text-gray-500">
+                      <span>Exchange rate</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        1 {preview.from} = {preview.rate.toFixed(6)} {preview.to}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>Converted amount</span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                        {formatCurrency(preview.convertedAmount, preview.to)}
+                      </span>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            )}
+
+            {sameAsCurrent && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">Already in {convertTarget}</p>
+            )}
+
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConvertModal(false)}
@@ -168,10 +210,10 @@ export function ExpenseDetailPage() {
               </button>
               <button
                 onClick={handleConvert}
-                disabled={convertExpense.isPending || convertTarget === expense.currency}
+                disabled={convertExpense.isPending || sameAsCurrent || previewLoading || !!previewError || !preview}
                 className="flex-1 bg-brand-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
               >
-                {convertExpense.isPending ? 'Converting…' : 'Convert'}
+                {convertExpense.isPending ? 'Converting…' : 'Confirm'}
               </button>
             </div>
           </div>

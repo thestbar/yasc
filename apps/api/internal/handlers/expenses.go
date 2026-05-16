@@ -395,6 +395,50 @@ func (h *ExpensesHandler) Update(c echo.Context) error {
 	return c.JSON(http.StatusOK, expense)
 }
 
+func (h *ExpensesHandler) ConvertPreview(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID := appMiddleware.CurrentUserID(c)
+	groupID := c.Param("groupId")
+	id := c.Param("id")
+	to := c.QueryParam("to")
+
+	if to == "" {
+		return badRequest(c, "to query param is required")
+	}
+	if !h.isMember(ctx, groupID, userID) {
+		return forbidden(c, "not a member")
+	}
+
+	expense := &models.Expense{}
+	if err := h.db.NewSelect().Model(expense).Where("id = ? AND group_id = ?", id, groupID).Scan(ctx); err != nil {
+		return notFound(c, "expense not found")
+	}
+
+	if expense.Currency == to {
+		return c.JSON(http.StatusOK, map[string]any{
+			"from":            expense.Currency,
+			"to":              to,
+			"rate":            1.0,
+			"originalAmount":  expense.Amount,
+			"convertedAmount": expense.Amount,
+		})
+	}
+
+	rate, err := services.LookupExchangeRate(ctx, h.db, h.cfg.FrankfurterURL, expense.Currency, to)
+	if err != nil {
+		return badRequest(c, fmt.Sprintf("currency conversion unavailable: %v", err))
+	}
+
+	convertedAmount := int64(math.Round(float64(expense.Amount) * rate))
+	return c.JSON(http.StatusOK, map[string]any{
+		"from":            expense.Currency,
+		"to":              to,
+		"rate":            rate,
+		"originalAmount":  expense.Amount,
+		"convertedAmount": convertedAmount,
+	})
+}
+
 type ConvertExpenseRequest struct {
 	TargetCurrency string `json:"targetCurrency"`
 }
