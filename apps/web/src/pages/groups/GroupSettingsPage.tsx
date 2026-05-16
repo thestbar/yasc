@@ -68,8 +68,9 @@ export function GroupSettingsPage() {
     try {
       await deleteGroup.mutateAsync(id!)
       navigate('/groups')
-    } catch {
-      toast.error('Failed to delete group')
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Failed to delete group')
+      setShowDeleteModal(false)
     }
   }
 
