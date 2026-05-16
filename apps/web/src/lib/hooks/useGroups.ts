@@ -66,6 +66,18 @@ export function useDeleteGroup() {
   })
 }
 
+export function useAddMember() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ groupId, query }: { groupId: string; query: string }) => {
+      const isEmail = query.includes('@')
+      return groupsApi.addMember(groupId, isEmail ? { email: query } : { username: query })
+    },
+    onSuccess: (_, { groupId }) =>
+      qc.invalidateQueries({ queryKey: ['groups', groupId, 'members'] }),
+  })
+}
+
 export function useRemoveMember() {
   const qc = useQueryClient()
   return useMutation({

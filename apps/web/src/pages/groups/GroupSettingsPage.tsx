@@ -4,10 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { ChevronLeft, Copy, RefreshCw, LogOut, Trash2, UserMinus } from 'lucide-react'
+import { ChevronLeft, Copy, RefreshCw, LogOut, Trash2, UserMinus, UserPlus } from 'lucide-react'
 import {
   useGroup, useGroupMembers, useUpdateGroup, useDeleteGroup,
-  useRemoveMember, useLeaveGroup, useRegenerateInvite,
+  useRemoveMember, useLeaveGroup, useRegenerateInvite, useAddMember,
 } from '../../lib/hooks/useGroups'
 import { useAuthStore } from '../../lib/store/auth'
 import { CURRENCIES } from '@yasc/utils'
@@ -32,6 +32,9 @@ export function GroupSettingsPage() {
   const removeMember = useRemoveMember()
   const leaveGroup = useLeaveGroup()
   const regenerate = useRegenerateInvite()
+  const addMember = useAddMember()
+
+  const [addQuery, setAddQuery] = useState('')
 
   const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<Fields>({
     resolver: zodResolver(schema),
@@ -81,6 +84,19 @@ export function GroupSettingsPage() {
       toast.success('New invite link generated')
     } catch {
       toast.error('Failed to regenerate link')
+    }
+  }
+
+  const onAddMember = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const q = addQuery.trim()
+    if (!q) return
+    try {
+      await addMember.mutateAsync({ groupId: id!, query: q })
+      toast.success(`Added ${q} to the group`)
+      setAddQuery('')
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'User not found')
     }
   }
 
@@ -166,6 +182,26 @@ export function GroupSettingsPage() {
       {/* Members */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-4">
         <h2 className="text-sm font-semibold mb-3">Members</h2>
+
+        {isOwner && (
+          <form onSubmit={onAddMember} className="flex gap-2 mb-4">
+            <input
+              value={addQuery}
+              onChange={(e) => setAddQuery(e.target.value)}
+              placeholder="Username or email"
+              className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <button
+              type="submit"
+              disabled={!addQuery.trim() || addMember.isPending}
+              className="flex items-center gap-1.5 bg-brand-600 text-white rounded-lg px-3 py-2 text-sm font-medium hover:bg-brand-700 disabled:opacity-50 shrink-0"
+            >
+              <UserPlus size={15} />
+              Add
+            </button>
+          </form>
+        )}
+
         <div className="space-y-2">
           {members.map((m) => (
             <div key={m.userId} className="flex items-center justify-between">
