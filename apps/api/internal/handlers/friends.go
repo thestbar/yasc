@@ -49,6 +49,20 @@ func (h *FriendsHandler) Requests(c echo.Context) error {
 	return c.JSON(http.StatusOK, friendships)
 }
 
+func (h *FriendsHandler) Sent(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID := appMiddleware.CurrentUserID(c)
+
+	friendships := make([]models.Friendship, 0)
+	if err := h.db.NewSelect().Model(&friendships).
+		Relation("Friend").
+		Where("friendship.user_id = ? AND friendship.status = 'pending'", userID).
+		Scan(ctx); err != nil {
+		return internalError(c)
+	}
+	return c.JSON(http.StatusOK, friendships)
+}
+
 func (h *FriendsHandler) SendRequest(c echo.Context) error {
 	var body struct {
 		Identifier string `json:"identifier"`

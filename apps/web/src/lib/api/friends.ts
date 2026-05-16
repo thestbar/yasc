@@ -6,6 +6,8 @@ export const friendsApi = {
 
   requests: () => http.get<Friendship[]>('/friends/requests').then((r) => r.data),
 
+  sent: () => http.get<Friendship[]>('/friends/sent').then((r) => r.data),
+
   sendRequest: (identifier: string) =>
     http.post<Friendship>('/friends/request', { identifier }).then((r) => r.data),
 

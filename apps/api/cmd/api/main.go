@@ -89,6 +89,7 @@ func main() {
 
 	protected.GET("/friends", friendsH.List)
 	protected.GET("/friends/requests", friendsH.Requests)
+	protected.GET("/friends/sent", friendsH.Sent)
 	protected.POST("/friends/request", friendsH.SendRequest)
 	protected.POST("/friends/request/:id/accept", friendsH.AcceptRequest)
 	protected.POST("/friends/request/:id/decline", friendsH.DeclineRequest)
