@@ -263,6 +263,12 @@ func (h *GroupsHandler) AddMember(c echo.Context) error {
 		}
 	}
 
+	already, _ := h.db.NewSelect().Model((*models.GroupMember)(nil)).
+		Where("group_id = ? AND user_id = ?", id, target.ID).Exists(ctx)
+	if already {
+		return badRequest(c, "user is already a member of this group")
+	}
+
 	member := &models.GroupMember{
 		ID:       uuid.New().String(),
 		GroupID:  id,
@@ -270,8 +276,7 @@ func (h *GroupsHandler) AddMember(c echo.Context) error {
 		Role:     "member",
 		JoinedAt: time.Now(),
 	}
-	if _, err := h.db.NewInsert().Model(member).
-		On("CONFLICT (group_id, user_id) DO NOTHING").Exec(ctx); err != nil {
+	if _, err := h.db.NewInsert().Model(member).Exec(ctx); err != nil {
 		return internalError(c)
 	}
 	h.activity.LogMemberJoined(ctx, target.ID, id)
