@@ -17,8 +17,11 @@ type Expense struct {
 	Category     string    `bun:"category,notnull" json:"category"`
 	PaidByID     string    `bun:"paid_by_id,notnull" json:"paidById"`
 	SplitType    string    `bun:"split_type,notnull" json:"splitType"`
-	ReceiptURL   *string   `bun:"receipt_url" json:"receiptUrl"`
-	Notes        *string   `bun:"notes" json:"notes"`
+	ReceiptURL       *string  `bun:"receipt_url" json:"receiptUrl"`
+	Notes            *string  `bun:"notes" json:"notes"`
+	OriginalCurrency *string  `bun:"original_currency" json:"originalCurrency"`
+	OriginalAmount   *int64   `bun:"original_amount" json:"originalAmount"`
+	ExchangeRate     *float64 `bun:"exchange_rate" json:"exchangeRate"`
 	CreatedByID  string    `bun:"created_by_id,notnull" json:"createdById"`
 	CreatedAt    time.Time `bun:"created_at,notnull" json:"createdAt"`
 	UpdatedAt    time.Time `bun:"updated_at,notnull" json:"updatedAt"`

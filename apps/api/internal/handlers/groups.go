@@ -23,15 +23,16 @@ func NewGroupsHandler(db *bun.DB, act *services.ActivityService) *GroupsHandler 
 }
 
 type CreateGroupRequest struct {
-	Name          string  `json:"name"`
-	Description   *string `json:"description"`
-	Currency      string  `json:"currency"`
-	ImageURL      *string `json:"imageUrl"`
-	StartDate     *string `json:"startDate"`
-	EndDate       *string `json:"endDate"`
-	MaxMembers    *int    `json:"maxMembers"`
-	DefaultSplit  string  `json:"defaultSplit"`
-	SimplifyDebts bool    `json:"simplifyDebts"`
+	Name                  string  `json:"name"`
+	Description           *string `json:"description"`
+	Currency              string  `json:"currency"`
+	ImageURL              *string `json:"imageUrl"`
+	StartDate             *string `json:"startDate"`
+	EndDate               *string `json:"endDate"`
+	MaxMembers            *int    `json:"maxMembers"`
+	DefaultSplit          string  `json:"defaultSplit"`
+	SimplifyDebts         bool    `json:"simplifyDebts"`
+	ConsolidateCurrencies bool    `json:"consolidateCurrencies"`
 }
 
 func (h *GroupsHandler) List(c echo.Context) error {
@@ -66,20 +67,21 @@ func (h *GroupsHandler) Create(c echo.Context) error {
 	}
 
 	group := &models.Group{
-		ID:            uuid.New().String(),
-		Name:          req.Name,
-		Description:   req.Description,
-		Currency:      req.Currency,
-		ImageURL:      req.ImageURL,
-		StartDate:     req.StartDate,
-		EndDate:       req.EndDate,
-		MaxMembers:    req.MaxMembers,
-		SimplifyDebts: req.SimplifyDebts,
-		DefaultSplit:  req.DefaultSplit,
-		InviteCode:    uuid.New().String(),
-		CreatedByID:   userID,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		ID:                    uuid.New().String(),
+		Name:                  req.Name,
+		Description:           req.Description,
+		Currency:              req.Currency,
+		ImageURL:              req.ImageURL,
+		StartDate:             req.StartDate,
+		EndDate:               req.EndDate,
+		MaxMembers:            req.MaxMembers,
+		SimplifyDebts:         req.SimplifyDebts,
+		ConsolidateCurrencies: req.ConsolidateCurrencies,
+		DefaultSplit:          req.DefaultSplit,
+		InviteCode:            uuid.New().String(),
+		CreatedByID:           userID,
+		CreatedAt:             time.Now(),
+		UpdatedAt:             time.Now(),
 	}
 
 	tx, err := h.db.BeginTx(ctx, nil)
@@ -139,13 +141,14 @@ func (h *GroupsHandler) Update(c echo.Context) error {
 	}
 
 	var body struct {
-		Name          *string `json:"name"`
-		Description   *string `json:"description"`
-		Currency      *string `json:"currency"`
-		ImageURL      *string `json:"imageUrl"`
-		MaxMembers    *int    `json:"maxMembers"`
-		SimplifyDebts *bool   `json:"simplifyDebts"`
-		DefaultSplit  *string `json:"defaultSplit"`
+		Name                  *string `json:"name"`
+		Description           *string `json:"description"`
+		Currency              *string `json:"currency"`
+		ImageURL              *string `json:"imageUrl"`
+		MaxMembers            *int    `json:"maxMembers"`
+		SimplifyDebts         *bool   `json:"simplifyDebts"`
+		DefaultSplit          *string `json:"defaultSplit"`
+		ConsolidateCurrencies *bool   `json:"consolidateCurrencies"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return badRequest(c, "invalid request body")
@@ -172,6 +175,9 @@ func (h *GroupsHandler) Update(c echo.Context) error {
 	}
 	if body.DefaultSplit != nil {
 		q = q.Set("default_split = ?", *body.DefaultSplit)
+	}
+	if body.ConsolidateCurrencies != nil {
+		q = q.Set("consolidate_currencies = ?", *body.ConsolidateCurrencies)
 	}
 	if _, err := q.Exec(ctx); err != nil {
 		return internalError(c)
@@ -391,16 +397,65 @@ func (h *GroupsHandler) Balances(c echo.Context) error {
 	var settlements []*models.Settlement
 	_ = h.db.NewSelect().Model(&settlements).Where("settlement.group_id = ?", id).Scan(ctx)
 
-	balances := services.CalculateGroupBalances(expenses, settlements)
-
 	group := &models.Group{}
 	_ = h.db.NewSelect().Model(group).Where("id = ?", id).Scan(ctx)
 
-	if group.SimplifyDebts {
-		debts := services.SimplifyDebts(balances)
-		return c.JSON(http.StatusOK, map[string]any{"balances": balances, "simplifiedDebts": debts})
+	var members []models.GroupMember
+	_ = h.db.NewSelect().Model(&members).Relation("User").Where("group_member.group_id = ?", id).Scan(ctx)
+	nameOf := func(uid string) string {
+		for _, m := range members {
+			if m.User != nil && m.User.ID == uid {
+				return m.User.DisplayName
+			}
+		}
+		return uid
 	}
-	return c.JSON(http.StatusOK, map[string]any{"balances": balances, "simplifiedDebts": []any{}})
+
+	rawBalances := services.CalculateGroupBalances(expenses, settlements)
+
+	type BalanceResp struct {
+		UserID   string `json:"userId"`
+		UserName string `json:"userName"`
+		Amount   int64  `json:"amount"`
+		Currency string `json:"currency"`
+	}
+	type DebtResp struct {
+		FromUserID   string `json:"fromUserId"`
+		FromUserName string `json:"fromUserName"`
+		ToUserID     string `json:"toUserId"`
+		ToUserName   string `json:"toUserName"`
+		Amount       int64  `json:"amount"`
+		Currency     string `json:"currency"`
+	}
+
+	balanceResp := make([]BalanceResp, 0)
+	for _, b := range rawBalances {
+		if b.Amount != 0 {
+			balanceResp = append(balanceResp, BalanceResp{
+				UserID:   b.UserID,
+				UserName: nameOf(b.UserID),
+				Amount:   b.Amount,
+				Currency: b.Currency,
+			})
+		}
+	}
+
+	if group.SimplifyDebts {
+		rawDebts := services.SimplifyDebts(rawBalances)
+		debtResp := make([]DebtResp, 0, len(rawDebts))
+		for _, d := range rawDebts {
+			debtResp = append(debtResp, DebtResp{
+				FromUserID:   d.FromUserID,
+				FromUserName: nameOf(d.FromUserID),
+				ToUserID:     d.ToUserID,
+				ToUserName:   nameOf(d.ToUserID),
+				Amount:       d.Amount,
+				Currency:     d.Currency,
+			})
+		}
+		return c.JSON(http.StatusOK, map[string]any{"balances": balanceResp, "simplifiedDebts": debtResp})
+	}
+	return c.JSON(http.StatusOK, map[string]any{"balances": balanceResp, "simplifiedDebts": []any{}})
 }
 
 func (h *GroupsHandler) isMember(ctx context.Context, groupID, userID string) bool {

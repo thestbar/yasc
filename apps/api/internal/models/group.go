@@ -16,7 +16,8 @@ type Group struct {
 	StartDate     *string   `bun:"start_date" json:"startDate"`
 	EndDate       *string   `bun:"end_date" json:"endDate"`
 	MaxMembers    *int      `bun:"max_members" json:"maxMembers"`
-	SimplifyDebts bool      `bun:"simplify_debts,notnull" json:"simplifyDebts"`
+	SimplifyDebts         bool      `bun:"simplify_debts,notnull" json:"simplifyDebts"`
+	ConsolidateCurrencies bool      `bun:"consolidate_currencies,notnull" json:"consolidateCurrencies"`
 	DefaultSplit  string    `bun:"default_split,notnull" json:"defaultSplit"`
 	InviteCode    string    `bun:"invite_code,notnull" json:"inviteCode"`
 	CreatedByID   string    `bun:"created_by_id,notnull" json:"createdById"`

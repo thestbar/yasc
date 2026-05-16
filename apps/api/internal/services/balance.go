@@ -4,59 +4,103 @@ import (
 	"github.com/thestbar/yasc/api/internal/models"
 )
 
-type Balance struct {
-	UserID string  `json:"userId"`
-	Amount int64   `json:"amount"`
-	User   *models.User `json:"user,omitempty"`
+// CurrencyBalance is a user's net amount in a specific currency.
+// Positive = they are owed money; negative = they owe money.
+type CurrencyBalance struct {
+	UserID   string
+	Currency string
+	Amount   int64
 }
 
-type Debt struct {
-	FromUserID string `json:"fromUserId"`
-	ToUserID   string `json:"toUserId"`
-	Amount     int64  `json:"amount"`
+// CurrencyDebt is a directed payment needed to settle balances.
+type CurrencyDebt struct {
+	FromUserID string
+	ToUserID   string
+	Amount     int64
+	Currency   string
 }
 
-func CalculateGroupBalances(expenses []*models.Expense, settlements []*models.Settlement) []Balance {
-	net := make(map[string]int64)
+// CalculateGroupBalances computes net amounts per user per currency across all
+// expenses and settlements.
+func CalculateGroupBalances(expenses []*models.Expense, settlements []*models.Settlement) []CurrencyBalance {
+	// net[userId][currency] = net amount
+	net := make(map[string]map[string]int64)
 
-	for _, e := range expenses {
-		net[e.PaidByID] += e.Amount
-		for _, s := range e.Splits {
-			net[s.UserID] -= s.Amount
+	ensure := func(uid, curr string) {
+		if net[uid] == nil {
+			net[uid] = make(map[string]int64)
 		}
 	}
-	for _, s := range settlements {
-		net[s.FromUserID] += s.Amount
-		net[s.ToUserID] -= s.Amount
+
+	for _, e := range expenses {
+		curr := e.Currency
+		ensure(e.PaidByID, curr)
+		net[e.PaidByID][curr] += e.Amount
+		for _, s := range e.Splits {
+			ensure(s.UserID, curr)
+			net[s.UserID][curr] -= s.Amount
+		}
 	}
 
-	out := make([]Balance, 0, len(net))
-	for uid, amt := range net {
-		out = append(out, Balance{UserID: uid, Amount: amt})
+	for _, s := range settlements {
+		curr := s.Currency
+		ensure(s.FromUserID, curr)
+		ensure(s.ToUserID, curr)
+		net[s.FromUserID][curr] += s.Amount
+		net[s.ToUserID][curr] -= s.Amount
+	}
+
+	out := make([]CurrencyBalance, 0)
+	for uid, currencies := range net {
+		for curr, amt := range currencies {
+			out = append(out, CurrencyBalance{UserID: uid, Currency: curr, Amount: amt})
+		}
 	}
 	return out
 }
 
-func SimplifyDebts(balances []Balance) []Debt {
-	creditors := make([]Balance, 0)
-	debtors := make([]Balance, 0)
+// SimplifyDebts minimises the number of transactions needed to settle all
+// balances, operating independently per currency.
+func SimplifyDebts(balances []CurrencyBalance) []CurrencyDebt {
+	byCurrency := make(map[string][]CurrencyBalance)
+	for _, b := range balances {
+		byCurrency[b.Currency] = append(byCurrency[b.Currency], b)
+	}
+
+	var result []CurrencyDebt
+	for curr, bals := range byCurrency {
+		for _, d := range simplifyWithinCurrency(bals) {
+			result = append(result, CurrencyDebt{
+				FromUserID: d.FromUserID,
+				ToUserID:   d.ToUserID,
+				Amount:     d.Amount,
+				Currency:   curr,
+			})
+		}
+	}
+	return result
+}
+
+func simplifyWithinCurrency(balances []CurrencyBalance) []CurrencyDebt {
+	creditors := make([]CurrencyBalance, 0)
+	debtors := make([]CurrencyBalance, 0)
 
 	for _, b := range balances {
 		if b.Amount > 0 {
 			creditors = append(creditors, b)
 		} else if b.Amount < 0 {
-			debtors = append(debtors, Balance{UserID: b.UserID, Amount: -b.Amount})
+			debtors = append(debtors, CurrencyBalance{UserID: b.UserID, Amount: -b.Amount})
 		}
 	}
 
-	var result []Debt
+	var result []CurrencyDebt
 	ci, di := 0, 0
 	for ci < len(creditors) && di < len(debtors) {
 		settle := creditors[ci].Amount
 		if debtors[di].Amount < settle {
 			settle = debtors[di].Amount
 		}
-		result = append(result, Debt{
+		result = append(result, CurrencyDebt{
 			FromUserID: debtors[di].UserID,
 			ToUserID:   creditors[ci].UserID,
 			Amount:     settle,

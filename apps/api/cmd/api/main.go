@@ -36,7 +36,7 @@ func main() {
 	usersH := handlers.NewUsersHandler(db)
 	friendsH := handlers.NewFriendsHandler(db, mail)
 	groupsH := handlers.NewGroupsHandler(db, actSvc)
-	expensesH := handlers.NewExpensesHandler(db, actSvc)
+	expensesH := handlers.NewExpensesHandler(db, actSvc, cfg)
 	settlementsH := handlers.NewSettlementsHandler(db, actSvc)
 	currencyH := handlers.NewCurrencyHandler(db, cfg)
 	activityH := handlers.NewActivityHandler(db)

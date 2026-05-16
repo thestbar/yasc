@@ -2,11 +2,14 @@ package handlers
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/thestbar/yasc/api/internal/config"
 	appMiddleware "github.com/thestbar/yasc/api/internal/middleware"
 	"github.com/thestbar/yasc/api/internal/models"
 	"github.com/thestbar/yasc/api/internal/services"
@@ -16,10 +19,20 @@ import (
 type ExpensesHandler struct {
 	db       *bun.DB
 	activity *services.ActivityService
+	cfg      *config.Config
 }
 
-func NewExpensesHandler(db *bun.DB, act *services.ActivityService) *ExpensesHandler {
-	return &ExpensesHandler{db: db, activity: act}
+func NewExpensesHandler(db *bun.DB, act *services.ActivityService, cfg *config.Config) *ExpensesHandler {
+	return &ExpensesHandler{db: db, activity: act, cfg: cfg}
+}
+
+func (h *ExpensesHandler) applyConversion(ctx context.Context, groupCurrency, expCurrency string, amount int64) (convertedAmount int64, rate float64, err error) {
+	rate, err = services.LookupExchangeRate(ctx, h.db, h.cfg.FrankfurterURL, expCurrency, groupCurrency)
+	if err != nil {
+		return 0, 0, err
+	}
+	convertedAmount = int64(math.Round(float64(amount) * rate))
+	return convertedAmount, rate, nil
 }
 
 type SplitInput struct {
@@ -113,6 +126,31 @@ func (h *ExpensesHandler) Create(c echo.Context) error {
 		req.Category = "general"
 	}
 
+	group := &models.Group{}
+	if err := h.db.NewSelect().Model(group).Where("id = ?", groupID).Scan(ctx); err != nil {
+		return internalError(c)
+	}
+
+	var (
+		originalCurrency *string
+		originalAmount   *int64
+		exchangeRate     *float64
+	)
+
+	if group.ConsolidateCurrencies && req.Currency != "" && req.Currency != group.Currency {
+		orig := req.Currency
+		origAmt := req.Amount
+		converted, rate, cerr := h.applyConversion(ctx, group.Currency, req.Currency, req.Amount)
+		if cerr != nil {
+			return badRequest(c, fmt.Sprintf("currency conversion unavailable: %v", cerr))
+		}
+		req.Amount = converted
+		req.Currency = group.Currency
+		originalCurrency = &orig
+		originalAmount = &origAmt
+		exchangeRate = &rate
+	}
+
 	// Validate and compute splits
 	svcInputs := make([]services.SplitInput, len(req.Splits))
 	for i, s := range req.Splits {
@@ -148,20 +186,23 @@ func (h *ExpensesHandler) Create(c echo.Context) error {
 	}
 
 	expense := &models.Expense{
-		ID:          uuid.New().String(),
-		GroupID:     groupID,
-		Description: req.Description,
-		Amount:      req.Amount,
-		Currency:    req.Currency,
-		Date:        req.Date,
-		Category:    req.Category,
-		PaidByID:    req.PaidByID,
-		SplitType:   req.SplitType,
-		ReceiptURL:  req.ReceiptURL,
-		Notes:       req.Notes,
-		CreatedByID: userID,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:               uuid.New().String(),
+		GroupID:          groupID,
+		Description:      req.Description,
+		Amount:           req.Amount,
+		Currency:         req.Currency,
+		Date:             req.Date,
+		Category:         req.Category,
+		PaidByID:         req.PaidByID,
+		SplitType:        req.SplitType,
+		ReceiptURL:       req.ReceiptURL,
+		Notes:            req.Notes,
+		OriginalCurrency: originalCurrency,
+		OriginalAmount:   originalAmount,
+		ExchangeRate:     exchangeRate,
+		CreatedByID:      userID,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
 	}
 
 	tx, err := h.db.BeginTx(ctx, nil)
@@ -243,6 +284,31 @@ func (h *ExpensesHandler) Update(c echo.Context) error {
 		req.Category = "general"
 	}
 
+	updateGroup := &models.Group{}
+	if err := h.db.NewSelect().Model(updateGroup).Where("id = ?", groupID).Scan(ctx); err != nil {
+		return internalError(c)
+	}
+
+	var (
+		updatedOriginalCurrency *string
+		updatedOriginalAmount   *int64
+		updatedExchangeRate     *float64
+	)
+
+	if updateGroup.ConsolidateCurrencies && req.Currency != "" && req.Currency != updateGroup.Currency {
+		orig := req.Currency
+		origAmt := req.Amount
+		converted, rate, cerr := h.applyConversion(ctx, updateGroup.Currency, req.Currency, req.Amount)
+		if cerr != nil {
+			return badRequest(c, fmt.Sprintf("currency conversion unavailable: %v", cerr))
+		}
+		req.Amount = converted
+		req.Currency = updateGroup.Currency
+		updatedOriginalCurrency = &orig
+		updatedOriginalAmount = &origAmt
+		updatedExchangeRate = &rate
+	}
+
 	svcInputs := make([]services.SplitInput, len(req.Splits))
 	for i, s := range req.Splits {
 		svcInputs[i] = services.SplitInput{
@@ -297,6 +363,9 @@ func (h *ExpensesHandler) Update(c echo.Context) error {
 		Set("paid_by_id = ?", req.PaidByID).
 		Set("split_type = ?", req.SplitType).
 		Set("notes = ?", req.Notes).
+		Set("original_currency = ?", updatedOriginalCurrency).
+		Set("original_amount = ?", updatedOriginalAmount).
+		Set("exchange_rate = ?", updatedExchangeRate).
 		Set("updated_at = ?", time.Now()).
 		WherePK().Exec(ctx); err != nil {
 		_ = tx.Rollback()

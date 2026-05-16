@@ -17,6 +17,7 @@ func TestCalculateGroupBalances(t *testing.T) {
 	expense := &models.Expense{
 		PaidByID: alice,
 		Amount:   300,
+		Currency: "USD",
 		Splits: []*models.ExpenseSplit{
 			{UserID: alice, Amount: 100},
 			{UserID: bob, Amount: 100},
@@ -28,7 +29,7 @@ func TestCalculateGroupBalances(t *testing.T) {
 
 	find := func(uid string) int64 {
 		for _, b := range balances {
-			if b.UserID == uid {
+			if b.UserID == uid && b.Currency == "USD" {
 				return b.Amount
 			}
 		}
@@ -47,6 +48,7 @@ func TestBalancesSettlementOffset(t *testing.T) {
 
 	expense := &models.Expense{
 		PaidByID: alice, Amount: 300,
+		Currency: "USD",
 		Splits: []*models.ExpenseSplit{
 			{UserID: alice, Amount: 100},
 			{UserID: bob, Amount: 100},
@@ -54,12 +56,12 @@ func TestBalancesSettlementOffset(t *testing.T) {
 		},
 	}
 	settlement := &models.Settlement{
-		FromUserID: bob, ToUserID: alice, Amount: 100,
+		FromUserID: bob, ToUserID: alice, Amount: 100, Currency: "USD",
 	}
 
 	balances := services.CalculateGroupBalances([]*models.Expense{expense}, []*models.Settlement{settlement})
 	for _, b := range balances {
-		if b.UserID == bob {
+		if b.UserID == bob && b.Currency == "USD" {
 			assert.Equal(t, int64(0), b.Amount)
 		}
 	}
@@ -67,10 +69,10 @@ func TestBalancesSettlementOffset(t *testing.T) {
 
 func TestSimplifyDebts(t *testing.T) {
 	// A owes 200, B gets 100, C gets 100
-	balances := []services.Balance{
-		{UserID: "A", Amount: -200},
-		{UserID: "B", Amount: 100},
-		{UserID: "C", Amount: 100},
+	balances := []services.CurrencyBalance{
+		{UserID: "A", Currency: "USD", Amount: -200},
+		{UserID: "B", Currency: "USD", Amount: 100},
+		{UserID: "C", Currency: "USD", Amount: 100},
 	}
 
 	debts := services.SimplifyDebts(balances)
@@ -87,9 +89,9 @@ func TestSimplifyDebtsEmpty(t *testing.T) {
 }
 
 func TestSimplifyDebtsMutualCancel(t *testing.T) {
-	balances := []services.Balance{
-		{UserID: "A", Amount: 100},
-		{UserID: "B", Amount: -100},
+	balances := []services.CurrencyBalance{
+		{UserID: "A", Currency: "USD", Amount: 100},
+		{UserID: "B", Currency: "USD", Amount: -100},
 	}
 	debts := services.SimplifyDebts(balances)
 	assert.Len(t, debts, 1)
