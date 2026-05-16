@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ChevronLeft, Copy, RefreshCw, LogOut, Trash2, UserMinus, UserPlus } from 'lucide-react'
+import { Checkbox } from '../../components/shared/Checkbox'
 import {
   useGroup, useGroupMembers, useUpdateGroup, useDeleteGroup,
   useRemoveMember, useLeaveGroup, useRegenerateInvite, useAddMember,
@@ -138,20 +139,16 @@ export function GroupSettingsPage() {
                 {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code} — {c.name}</option>)}
               </select>
             </div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input {...register('simplifyDebts')} type="checkbox" className="w-4 h-4 rounded accent-brand-600" />
-              <div>
-                <p className="text-sm font-medium">Simplify debts</p>
-                <p className="text-xs text-gray-500">Reduce the number of transactions needed to settle up</p>
-              </div>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input {...register('consolidateCurrencies')} type="checkbox" className="w-4 h-4 rounded accent-brand-600" />
-              <div>
-                <p className="text-sm font-medium">Auto-convert currencies</p>
-                <p className="text-xs text-gray-500">Automatically convert expenses in other currencies to {group.currency} using live exchange rates</p>
-              </div>
-            </label>
+            <Checkbox
+              {...register('simplifyDebts')}
+              label="Simplify debts"
+              description="Reduce the number of transactions needed to settle up"
+            />
+            <Checkbox
+              {...register('consolidateCurrencies')}
+              label="Auto-convert currencies"
+              description={`Automatically convert expenses in other currencies to ${group.currency} using live exchange rates`}
+            />
             <button type="submit" disabled={!isDirty || update.isPending} className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50">
               {update.isPending ? 'Saving…' : 'Save changes'}
             </button>

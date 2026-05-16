@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ChevronLeft } from 'lucide-react'
+import { Checkbox } from '../../components/shared/Checkbox'
 import { useCreateGroup } from '../../lib/hooks/useGroups'
 import { CURRENCIES } from '@yasc/utils'
 
@@ -79,21 +80,17 @@ export function CreateGroupPage() {
             </select>
           </div>
 
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input {...register('simplifyDebts')} type="checkbox" className="w-4 h-4 rounded accent-brand-600" />
-            <div>
-              <p className="text-sm font-medium">Simplify debts</p>
-              <p className="text-xs text-gray-500">Reduce the number of transactions needed to settle up</p>
-            </div>
-          </label>
+          <Checkbox
+            {...register('simplifyDebts')}
+            label="Simplify debts"
+            description="Reduce the number of transactions needed to settle up"
+          />
 
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input {...register('consolidateCurrencies')} type="checkbox" className="w-4 h-4 rounded accent-brand-600" />
-            <div>
-              <p className="text-sm font-medium">Auto-convert currencies</p>
-              <p className="text-xs text-gray-500">Automatically convert expenses in other currencies to the group currency using live exchange rates</p>
-            </div>
-          </label>
+          <Checkbox
+            {...register('consolidateCurrencies')}
+            label="Auto-convert currencies"
+            description="Automatically convert expenses in other currencies to the group currency using live exchange rates"
+          />
 
           <button
             type="submit"
