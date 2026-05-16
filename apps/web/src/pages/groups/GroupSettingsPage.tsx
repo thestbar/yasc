@@ -9,6 +9,7 @@ import { Checkbox } from '../../components/shared/Checkbox'
 import {
   useGroup, useGroupMembers, useUpdateGroup, useDeleteGroup,
   useRemoveMember, useLeaveGroup, useRegenerateInvite, useAddMember,
+  useConvertAll, useConvertAllPreview,
 } from '../../lib/hooks/useGroups'
 import { useAuthStore } from '../../lib/store/auth'
 import { CURRENCIES } from '@yasc/utils'
@@ -34,8 +35,12 @@ export function GroupSettingsPage() {
   const leaveGroup = useLeaveGroup()
   const regenerate = useRegenerateInvite()
   const addMember = useAddMember()
+  const convertAll = useConvertAll()
 
   const [addQuery, setAddQuery] = useState('')
+  const [showConvertAllModal, setShowConvertAllModal] = useState(false)
+
+  const { data: convertAllPreview, isFetching: previewLoading } = useConvertAllPreview(id!, showConvertAllModal)
 
   const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<Fields>({
     resolver: zodResolver(schema),
@@ -85,6 +90,16 @@ export function GroupSettingsPage() {
       toast.success('New invite link generated')
     } catch {
       toast.error('Failed to regenerate link')
+    }
+  }
+
+  const onConvertAll = async () => {
+    try {
+      const result = await convertAll.mutateAsync(id!)
+      toast.success(`Converted ${result.converted} expense${result.converted !== 1 ? 's' : ''} to ${group?.currency}${result.skipped > 0 ? ` (${result.skipped} skipped — rate unavailable)` : ''}`)
+      setShowConvertAllModal(false)
+    } catch {
+      toast.error('Failed to convert expenses')
     }
   }
 
@@ -153,6 +168,23 @@ export function GroupSettingsPage() {
               {update.isPending ? 'Saving…' : 'Save changes'}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Bulk currency conversion (owner only) */}
+      {isOwner && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 mb-4">
+          <h2 className="text-sm font-semibold mb-1">Currency conversion</h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Convert all expenses that are not in <span className="font-medium">{group.currency}</span> to the group currency using live exchange rates.
+          </p>
+          <button
+            onClick={() => setShowConvertAllModal(true)}
+            className="flex items-center gap-2 text-sm bg-brand-600 text-white rounded-lg px-4 py-2 font-medium hover:bg-brand-700"
+          >
+            <RefreshCw size={14} />
+            Convert all to {group.currency}
+          </button>
         </div>
       )}
 
@@ -233,6 +265,52 @@ export function GroupSettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Convert-all confirmation modal */}
+      {showConvertAllModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 w-full max-w-sm shadow-xl space-y-4">
+            <h2 className="text-base font-semibold">Convert all expenses to {group.currency}</h2>
+            <p className="text-sm text-gray-500">
+              This will convert every expense not already in <span className="font-medium text-gray-800 dark:text-gray-200">{group.currency}</span> using live exchange rates. The original currency and amount will be saved on each expense for reference.
+            </p>
+
+            {previewLoading ? (
+              <div className="h-12 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
+            ) : convertAllPreview && convertAllPreview.breakdown.length > 0 ? (
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 space-y-1.5">
+                <p className="text-xs font-medium text-gray-500 mb-2">Expenses to convert</p>
+                {convertAllPreview.breakdown.map((row) => (
+                  <div key={row.currency} className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">{row.currency}</span>
+                    <span className="font-medium">{row.count} expense{row.count !== 1 ? 's' : ''}</span>
+                  </div>
+                ))}
+              </div>
+            ) : convertAllPreview?.breakdown.length === 0 ? (
+              <p className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3">
+                All expenses are already in {group.currency}. Nothing to convert.
+              </p>
+            ) : null}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConvertAllModal(false)}
+                className="flex-1 border border-gray-300 dark:border-gray-700 rounded-lg py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onConvertAll}
+                disabled={convertAll.isPending || previewLoading || convertAllPreview?.breakdown.length === 0}
+                className="flex-1 bg-brand-600 text-white rounded-lg py-2 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
+              >
+                {convertAll.isPending ? 'Converting…' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete confirmation modal */}
       {showDeleteModal && (

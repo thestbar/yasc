@@ -74,4 +74,14 @@ export const groupsApi = {
 
   balances: (id: string) =>
     http.get<GroupBalances>(`/groups/${id}/balances`).then((r) => r.data),
+
+  convertAllPreview: (id: string) =>
+    http.get<{ groupCurrency: string; breakdown: { currency: string; count: number }[] }>(
+      `/groups/${id}/expenses/convert-all/preview`
+    ).then((r) => r.data),
+
+  convertAll: (id: string) =>
+    http.post<{ converted: number; skipped: number; total: number }>(
+      `/groups/${id}/expenses/convert-all`
+    ).then((r) => r.data),
 }

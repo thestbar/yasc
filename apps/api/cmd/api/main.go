@@ -114,6 +114,8 @@ func main() {
 	protected.GET("/groups/:groupId/expenses/:id", expensesH.Get)
 	protected.PATCH("/groups/:groupId/expenses/:id", expensesH.Update)
 	protected.DELETE("/groups/:groupId/expenses/:id", expensesH.Delete)
+	protected.GET("/groups/:groupId/expenses/convert-all/preview", expensesH.ConvertAllPreview)
+	protected.POST("/groups/:groupId/expenses/convert-all", expensesH.ConvertAll)
 	protected.GET("/groups/:groupId/expenses/:id/convert-preview", expensesH.ConvertPreview)
 	protected.POST("/groups/:groupId/expenses/:id/convert", expensesH.Convert)
 

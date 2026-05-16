@@ -103,3 +103,22 @@ export function useRegenerateInvite() {
     onSuccess: (_, id) => qc.invalidateQueries({ queryKey: ['groups', id] }),
   })
 }
+
+export function useConvertAllPreview(groupId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['groups', groupId, 'convert-all-preview'],
+    queryFn: () => groupsApi.convertAllPreview(groupId),
+    enabled: !!groupId && enabled,
+  })
+}
+
+export function useConvertAll() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => groupsApi.convertAll(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ['expenses', id] })
+      qc.invalidateQueries({ queryKey: ['groups', id, 'balances'] })
+    },
+  })
+}

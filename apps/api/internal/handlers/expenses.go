@@ -548,6 +548,133 @@ func (h *ExpensesHandler) Delete(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]bool{"ok": true})
 }
 
+func (h *ExpensesHandler) ConvertAllPreview(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID := appMiddleware.CurrentUserID(c)
+	groupID := c.Param("groupId")
+
+	if !h.isMember(ctx, groupID, userID) {
+		return forbidden(c, "not a member")
+	}
+
+	group := &models.Group{}
+	if err := h.db.NewSelect().Model(group).Where("id = ?", groupID).Scan(ctx); err != nil {
+		return internalError(c)
+	}
+
+	type row struct {
+		Currency string `json:"currency"`
+		Count    int    `json:"count"`
+	}
+	var rows []row
+	if err := h.db.NewSelect().
+		TableExpr("expenses").
+		ColumnExpr("currency, COUNT(*) AS count").
+		Where("group_id = ? AND currency != ?", groupID, group.Currency).
+		GroupExpr("currency").
+		Scan(ctx, &rows); err != nil {
+		return internalError(c)
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"groupCurrency": group.Currency,
+		"breakdown":     rows,
+	})
+}
+
+func (h *ExpensesHandler) ConvertAll(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID := appMiddleware.CurrentUserID(c)
+	groupID := c.Param("groupId")
+
+	if !h.isOwner(ctx, groupID, userID) {
+		return forbidden(c, "only the group owner can bulk convert expenses")
+	}
+
+	group := &models.Group{}
+	if err := h.db.NewSelect().Model(group).Where("id = ?", groupID).Scan(ctx); err != nil {
+		return internalError(c)
+	}
+
+	expenses := make([]*models.Expense, 0)
+	if err := h.db.NewSelect().Model(&expenses).
+		Relation("Splits").
+		Where("expense.group_id = ? AND expense.currency != ?", groupID, group.Currency).
+		Scan(ctx); err != nil {
+		return internalError(c)
+	}
+
+	converted := 0
+	skipped := 0
+	for _, expense := range expenses {
+		rate, err := services.LookupExchangeRate(ctx, h.db, h.cfg.FrankfurterURL, expense.Currency, group.Currency)
+		if err != nil {
+			skipped++
+			continue
+		}
+
+		origCurrency := expense.Currency
+		origAmount := expense.Amount
+		newAmount := int64(math.Round(float64(origAmount) * rate))
+
+		totalAllocated := int64(0)
+		for i := range expense.Splits {
+			scaled := int64(math.Round(float64(expense.Splits[i].Amount) * rate))
+			totalAllocated += scaled
+			expense.Splits[i].Amount = scaled
+		}
+		if len(expense.Splits) > 0 {
+			expense.Splits[0].Amount += newAmount - totalAllocated
+		}
+
+		tx, txErr := h.db.BeginTx(ctx, nil)
+		if txErr != nil {
+			skipped++
+			continue
+		}
+
+		if _, err = tx.NewUpdate().Model(expense).
+			Set("amount = ?", newAmount).
+			Set("currency = ?", group.Currency).
+			Set("original_currency = ?", origCurrency).
+			Set("original_amount = ?", origAmount).
+			Set("exchange_rate = ?", rate).
+			Set("updated_at = ?", time.Now()).
+			WherePK().Exec(ctx); err != nil {
+			_ = tx.Rollback()
+			skipped++
+			continue
+		}
+
+		failed := false
+		for i := range expense.Splits {
+			if _, err = tx.NewUpdate().Model(expense.Splits[i]).
+				Set("amount = ?", expense.Splits[i].Amount).
+				WherePK().Exec(ctx); err != nil {
+				_ = tx.Rollback()
+				failed = true
+				break
+			}
+		}
+		if failed {
+			skipped++
+			continue
+		}
+
+		if err = tx.Commit(); err != nil {
+			skipped++
+			continue
+		}
+		converted++
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"converted": converted,
+		"skipped":   skipped,
+		"total":     len(expenses),
+	})
+}
+
 func (h *ExpensesHandler) isMember(ctx context.Context, groupID, userID string) bool {
 	exists, _ := h.db.NewSelect().Model((*models.GroupMember)(nil)).
 		Where("group_id = ? AND user_id = ?", groupID, userID).Exists(ctx)
