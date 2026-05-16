@@ -85,7 +85,7 @@ func (h *ExpensesHandler) List(c echo.Context) error {
 		Total:   total,
 		Page:    page,
 		Limit:   limit,
-		HasMore: (page*limit) < total,
+		HasMore: (page * limit) < total,
 	})
 }
 
@@ -232,6 +232,49 @@ func (h *ExpensesHandler) Update(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return badRequest(c, "invalid request body")
 	}
+	if req.Description == "" || req.Amount <= 0 || req.PaidByID == "" || len(req.Splits) == 0 {
+		return badRequest(c, "description, amount, paidById, and splits are required")
+	}
+
+	if req.Currency == "" {
+		req.Currency = "USD"
+	}
+	if req.Category == "" {
+		req.Category = "general"
+	}
+
+	svcInputs := make([]services.SplitInput, len(req.Splits))
+	for i, s := range req.Splits {
+		svcInputs[i] = services.SplitInput{
+			UserID:     s.UserID,
+			Amount:     s.Amount,
+			Percentage: s.Percentage,
+			Shares:     s.Shares,
+		}
+	}
+
+	var (
+		finalInputs []services.SplitInput
+		splitErr    error
+	)
+	switch req.SplitType {
+	case "equal":
+		finalInputs, splitErr = services.ValidateEqualSplit(req.Amount, svcInputs)
+	case "percentage":
+		finalInputs, splitErr = services.ValidatePercentageSplit(req.Amount, svcInputs)
+	case "shares":
+		finalInputs, splitErr = services.ValidateSharesSplit(req.Amount, svcInputs)
+	case "exact", "":
+		if verr := services.ValidateExactSplit(req.Amount, svcInputs); verr != nil {
+			return badRequest(c, verr.Error())
+		}
+		finalInputs = svcInputs
+	default:
+		return badRequest(c, "invalid splitType")
+	}
+	if splitErr != nil {
+		return badRequest(c, splitErr.Error())
+	}
 
 	tx, err := h.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -260,15 +303,15 @@ func (h *ExpensesHandler) Update(c echo.Context) error {
 		return internalError(c)
 	}
 
-	// Re-insert splits
-	for _, s := range req.Splits {
+	// Re-insert validated splits
+	for _, inp := range finalInputs {
 		split := &models.ExpenseSplit{
 			ID:         uuid.New().String(),
 			ExpenseID:  id,
-			UserID:     s.UserID,
-			Amount:     s.Amount,
-			Percentage: s.Percentage,
-			Shares:     s.Shares,
+			UserID:     inp.UserID,
+			Amount:     inp.Amount,
+			Percentage: inp.Percentage,
+			Shares:     inp.Shares,
 		}
 		if _, err = tx.NewInsert().Model(split).Exec(ctx); err != nil {
 			_ = tx.Rollback()
