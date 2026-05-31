@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChevronLeft } from 'lucide-react-native'
+import { toast } from 'sonner-native'
 import { useGroup, useGroupMembers } from '../../../../../../lib/hooks/useGroups'
 import { useExpense, useUpdateExpense } from '../../../../../../lib/hooks/useExpenses'
 import type { SplitType } from '@yasc/types'
@@ -42,9 +43,9 @@ export default function EditExpenseScreen() {
   }, [expense])
 
   const onSubmit = async () => {
-    if (!description.trim()) { Alert.alert('Error', 'Description is required'); return }
+    if (!description.trim()) { toast.error('Description is required'); return }
     const amountNum = parseFloat(amount)
-    if (!amountNum || amountNum <= 0) { Alert.alert('Error', 'Enter a valid amount'); return }
+    if (!amountNum || amountNum <= 0) { toast.error('Enter a valid amount'); return }
 
     const amountCents = Math.round(amountNum * 100)
     const memberIds = members.map((m) => m.userId)
@@ -89,7 +90,7 @@ export default function EditExpenseScreen() {
       })
       router.back()
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.message ?? 'Failed to update expense')
+      toast.error(err?.response?.data?.message ?? 'Failed to update expense')
     }
   }
 

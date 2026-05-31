@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner-native'
 import { useMe, useLogout } from '../../../lib/hooks/useAuth'
 import { useAuthStore } from '../../../lib/store/auth'
 import { usersApi } from '../../../lib/api/users'
@@ -25,14 +26,14 @@ export default function AccountScreen() {
 
   const updateProfile = useMutation({
     mutationFn: () => usersApi.update({ displayName, username }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['me'] }); Alert.alert('Saved', 'Profile updated') },
-    onError: (err: any) => Alert.alert('Error', err?.response?.data?.message ?? 'Failed to update profile'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['me'] }); toast.success('Profile updated') },
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Failed to update profile'),
   })
 
   const updatePassword = useMutation({
     mutationFn: () => usersApi.updatePassword({ currentPassword, newPassword }),
-    onSuccess: () => { setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); Alert.alert('Done', 'Password changed') },
-    onError: (err: any) => Alert.alert('Error', err?.response?.data?.message ?? 'Failed to change password'),
+    onSuccess: () => { setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); toast.success('Password changed') },
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Failed to change password'),
   })
 
   const deleteAccount = useMutation({
@@ -41,14 +42,14 @@ export default function AccountScreen() {
   })
 
   const onSaveProfile = () => {
-    if (!displayName.trim()) { Alert.alert('Error', 'Display name is required'); return }
-    if (!isValidUsername(username)) { Alert.alert('Error', 'Invalid username'); return }
+    if (!displayName.trim()) { toast.error('Display name is required'); return }
+    if (!isValidUsername(username)) { toast.error('Invalid username'); return }
     updateProfile.mutate()
   }
 
   const onChangePassword = () => {
-    if (newPassword !== confirmPassword) { Alert.alert('Error', 'Passwords do not match'); return }
-    if (newPassword.length < 8) { Alert.alert('Error', 'Password must be at least 8 characters'); return }
+    if (newPassword !== confirmPassword) { toast.error('Passwords do not match'); return }
+    if (newPassword.length < 8) { toast.error('Password must be at least 8 characters'); return }
     updatePassword.mutate()
   }
 

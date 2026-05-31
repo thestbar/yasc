@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, RefreshControl } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { UserPlus, Check, X } from 'lucide-react-native'
+import { toast } from 'sonner-native'
 import {
   useFriends, useFriendRequests, useSendFriendRequest,
   useAcceptFriendRequest, useDeclineFriendRequest, useRemoveFriend,
@@ -36,11 +37,11 @@ export default function FriendsScreen() {
     if (!identifier.trim()) return
     try {
       await sendRequest.mutateAsync(identifier.trim())
-      Alert.alert('Sent', 'Friend request sent')
+      toast.success('Friend request sent')
       setIdentifier('')
       setShowAdd(false)
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.message ?? 'Failed to send request')
+      toast.error(err?.response?.data?.message ?? 'Failed to send request')
     }
   }
 

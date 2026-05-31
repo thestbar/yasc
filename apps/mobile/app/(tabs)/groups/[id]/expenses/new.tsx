@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'reac
 import { router, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChevronLeft } from 'lucide-react-native'
+import { toast } from 'sonner-native'
 import { useGroup, useGroupMembers } from '../../../../../lib/hooks/useGroups'
 import { useCreateExpense } from '../../../../../lib/hooks/useExpenses'
 import { useAuthStore } from '../../../../../lib/store/auth'
@@ -27,9 +28,9 @@ export default function NewExpenseScreen() {
   const [notes, setNotes] = useState('')
 
   const onSubmit = async () => {
-    if (!description.trim()) { Alert.alert('Error', 'Description is required'); return }
+    if (!description.trim()) { toast.error('Description is required'); return }
     const amountNum = parseFloat(amount)
-    if (!amountNum || amountNum <= 0) { Alert.alert('Error', 'Enter a valid amount'); return }
+    if (!amountNum || amountNum <= 0) { toast.error('Enter a valid amount'); return }
 
     const amountCents = Math.round(amountNum * 100)
     const memberIds = members.map((m) => m.userId)
@@ -71,7 +72,7 @@ export default function NewExpenseScreen() {
       })
       router.back()
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.message ?? 'Failed to add expense')
+      toast.error(err?.response?.data?.message ?? 'Failed to add expense')
     }
   }
 
