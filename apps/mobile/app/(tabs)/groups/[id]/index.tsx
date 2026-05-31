@@ -1,7 +1,8 @@
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native'
+import { View, Text, FlatList, TouchableOpacity, RefreshControl } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
-import { Plus, Settings, ChevronLeft } from 'lucide-react-native'
+import { Plus, Settings, ChevronLeft, ArrowRightLeft } from 'lucide-react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { toast } from 'sonner-native'
 import { useGroup, useGroupBalances } from '../../../../lib/hooks/useGroups'
 import { useGroupExpenses } from '../../../../lib/hooks/useExpenses'
 import { useCreateSettlement } from '../../../../lib/hooks/useSettlements'
@@ -13,29 +14,29 @@ export default function GroupDetailScreen() {
   const user = useAuthStore((s) => s.user)
   const { data: group, isLoading: loadingGroup, refetch } = useGroup(id!)
   const { data: expenses = [], isLoading: loadingExpenses } = useGroupExpenses(id!)
-  const { data: balances = [] } = useGroupBalances(id!)
+  const { data: balanceData } = useGroupBalances(id!)
   const settle = useCreateSettlement()
 
-  const handleSettle = (toUserId: string, toUserName: string, amount: number) => {
+  const simplifiedDebts = balanceData?.simplifiedDebts ?? []
+  const rawBalances = balanceData?.balances ?? []
+  const showDebts = group?.simplifyDebts ?? false
+  const hasBalances = showDebts ? simplifiedDebts.length > 0 : rawBalances.length > 0
+
+  const handleSettle = async (toUserId: string, toUserName: string, amount: number, currency: string) => {
     if (!group || !user) return
-    Alert.alert(
-      'Settle up',
-      `Record payment of ${formatCurrency(amount, group.currency)} to ${toUserName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Record',
-          onPress: () => settle.mutate({
-            groupId: id!,
-            fromUserId: user.id,
-            toUserId,
-            amount,
-            currency: group.currency,
-            date: new Date().toISOString().slice(0, 10),
-          }),
-        },
-      ],
-    )
+    try {
+      await settle.mutateAsync({
+        groupId: id!,
+        fromUserId: user.id,
+        toUserId,
+        amount,
+        currency,
+        date: new Date().toISOString().slice(0, 10),
+      })
+      toast.success(`Settled up with ${toUserName}`)
+    } catch {
+      toast.error('Failed to record settlement')
+    }
   }
 
   if (!group && !loadingGroup) {
@@ -54,7 +55,10 @@ export default function GroupDetailScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <ChevronLeft size={24} color="#6b7280" />
           </TouchableOpacity>
-          <Text className="text-xl font-bold" numberOfLines={1}>{group?.name ?? '…'}</Text>
+          <View className="flex-1">
+            <Text className="text-xl font-bold" numberOfLines={1}>{group?.name ?? '…'}</Text>
+            <Text className="text-xs text-gray-500">{group?.currency}</Text>
+          </View>
         </View>
         <TouchableOpacity onPress={() => router.push(`/(tabs)/groups/${id}/settings`)}>
           <Settings size={22} color="#6b7280" />
@@ -69,31 +73,56 @@ export default function GroupDetailScreen() {
         ListHeaderComponent={
           <>
             {/* Balances */}
-            {balances.length > 0 && (
+            {hasBalances && (
               <View className="mx-4 mt-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4">
                 <Text className="text-sm font-semibold mb-3">Balances</Text>
-                {balances.map((b, i) => (
-                  <View key={i} className="flex-row items-center justify-between mb-2">
-                    <Text className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                      <Text className="font-medium">{b.fromUserName}</Text>
-                      {' owes '}
-                      <Text className="font-medium">{b.toUserName}</Text>
-                    </Text>
-                    <View className="flex-row items-center gap-2">
-                      <Text className="text-sm font-semibold text-red-500">
-                        {group ? formatCurrency(b.amount, group.currency) : ''}
-                      </Text>
-                      {b.fromUserId === user?.id && (
-                        <TouchableOpacity
-                          onPress={() => handleSettle(b.toUserId, b.toUserName, b.amount)}
-                          className="bg-indigo-600 rounded-md px-2 py-1"
-                        >
-                          <Text className="text-white text-xs">Settle</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
-                ))}
+
+                {showDebts ? (
+                  <>
+                    {simplifiedDebts.map((d, i) => (
+                      <View key={i} className="flex-row items-center justify-between mb-2">
+                        <Text className="text-sm text-gray-700 dark:text-gray-300 flex-1 mr-2">
+                          <Text className="font-medium">{d.fromUserName}</Text>
+                          {' owes '}
+                          <Text className="font-medium">{d.toUserName}</Text>
+                        </Text>
+                        <View className="flex-row items-center gap-2">
+                          <Text className={`text-sm font-semibold ${
+                            d.toUserId === user?.id ? 'text-green-600' :
+                            d.fromUserId === user?.id ? 'text-red-500' :
+                            'text-gray-600 dark:text-gray-400'
+                          }`}>
+                            {formatCurrency(d.amount, d.currency)}
+                          </Text>
+                          {d.fromUserId === user?.id && (
+                            <TouchableOpacity
+                              onPress={() => handleSettle(d.toUserId, d.toUserName, d.amount, d.currency)}
+                              disabled={settle.isPending}
+                              className="flex-row items-center gap-1 bg-indigo-600 rounded-md px-2 py-1"
+                            >
+                              <ArrowRightLeft size={11} color="white" />
+                              <Text className="text-white text-xs">Settle</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    {rawBalances.map((b, i) => (
+                      <View key={i} className="flex-row items-center justify-between mb-2">
+                        <Text className="text-sm font-medium text-gray-700 dark:text-gray-300">{b.userName}</Text>
+                        <Text className={`text-sm font-semibold ${b.amount >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          {b.amount >= 0 ? '+' : ''}{formatCurrency(Math.abs(b.amount), b.currency)}
+                          {b.currency !== group?.currency && (
+                            <Text className="text-gray-400 font-normal"> {b.currency}</Text>
+                          )}
+                        </Text>
+                      </View>
+                    ))}
+                  </>
+                )}
               </View>
             )}
 
@@ -119,12 +148,15 @@ export default function GroupDetailScreen() {
               <View className="flex-1 mr-3">
                 <Text className="font-medium text-sm" numberOfLines={1}>{item.description}</Text>
                 <Text className="text-xs text-gray-500 mt-0.5">
-                  {item.paidBy?.displayName ?? item.paidBy?.username} · {formatExpenseDate(item.date)}
+                  Paid by {item.paidBy?.displayName ?? item.paidBy?.username} · {formatExpenseDate(item.date)}
                 </Text>
               </View>
-              <Text className="font-semibold text-sm shrink-0">
-                {formatCurrency(item.amount, item.currency)}
-              </Text>
+              <View className="items-end">
+                <Text className="font-semibold text-sm">{formatCurrency(item.amount, item.currency)}</Text>
+                {item.originalCurrency && item.originalCurrency !== item.currency && (
+                  <Text className="text-xs text-gray-400">{formatCurrency(item.originalAmount!, item.originalCurrency)}</Text>
+                )}
+              </View>
             </View>
           </TouchableOpacity>
         )}
