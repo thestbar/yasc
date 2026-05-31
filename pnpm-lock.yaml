@@ -131,6 +131,9 @@ importers:
       react-native-svg:
         specifier: ^15.5.0
         version: 15.15.4(react-native@0.74.3(@babel/core@7.29.0)(@babel/preset-env@7.29.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0)
+      sonner-native:
+        specifier: 0.13.0
+        version: 0.13.0(d11c2de84c6dc0c699fd5bc4f14238e7)
       tailwindcss:
         specifier: ^3.4.7
         version: 3.4.19(yaml@2.8.4)
@@ -6067,6 +6070,21 @@ packages:
 
   snake-case@3.0.4:
     resolution: {integrity: sha512-LAOh4z89bGQvl9pFfNF8V146i7o7/CqFPbqzYgP+yYzDIDeS9HaNFtXABamRW+AQzEVODcvE79ljJ+8a9YSdMg==}
+
+  sonner-native@0.13.0:
+    resolution: {integrity: sha512-wGlgZxoMtDyzNzYJi9qJOHmrIVs2HssRzQ5DFk0zAxCn/vZvQ7lnqtocQ2eHKOB+3IXUP0nduvGI+9JmfBqhPA==}
+    peerDependencies:
+      nativewind: '*'
+      react: '*'
+      react-native: '*'
+      react-native-gesture-handler: '>=2.16.1'
+      react-native-reanimated: '>=3.10.1'
+      react-native-safe-area-context: '>=4.10.5'
+      react-native-screens: '>=3.31.1'
+      react-native-svg: '>=15.6.0'
+    peerDependenciesMeta:
+      nativewind:
+        optional: true
 
   sonner@1.7.4:
     resolution: {integrity: sha512-DIS8z4PfJRbIyfVFDVnK9rO3eYDtse4Omcm6bt0oEr5/jtLgysmjuBl1frJ9E/EQZrFmKx2A8m/s5s9CRXIzhw==}
@@ -14430,6 +14448,18 @@ snapshots:
     dependencies:
       dot-case: 3.0.4
       tslib: 2.8.1
+
+  sonner-native@0.13.0(d11c2de84c6dc0c699fd5bc4f14238e7):
+    dependencies:
+      react: 18.2.0
+      react-native: 0.74.3(@babel/core@7.29.0)(@babel/preset-env@7.29.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0)
+      react-native-gesture-handler: 2.17.1(react-native@0.74.3(@babel/core@7.29.0)(@babel/preset-env@7.29.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0)
+      react-native-reanimated: 3.10.1(@babel/core@7.29.0)(react-native@0.74.3(@babel/core@7.29.0)(@babel/preset-env@7.29.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0)
+      react-native-safe-area-context: 4.10.5(react-native@0.74.3(@babel/core@7.29.0)(@babel/preset-env@7.29.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0)
+      react-native-screens: 3.31.1(react-native@0.74.3(@babel/core@7.29.0)(@babel/preset-env@7.29.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0)
+      react-native-svg: 15.15.4(react-native@0.74.3(@babel/core@7.29.0)(@babel/preset-env@7.29.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0)
+    optionalDependencies:
+      nativewind: 4.2.3(react-native-reanimated@3.10.1(@babel/core@7.29.0)(react-native@0.74.3(@babel/core@7.29.0)(@babel/preset-env@7.29.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0))(react-native-safe-area-context@4.10.5(react-native@0.74.3(@babel/core@7.29.0)(@babel/preset-env@7.29.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0))(react-native-svg@15.15.4(react-native@0.74.3(@babel/core@7.29.0)(@babel/preset-env@7.29.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0))(react-native@0.74.3(@babel/core@7.29.0)(@babel/preset-env@7.29.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0)(tailwindcss@3.4.19(yaml@2.8.4))
 
   sonner@1.7.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:

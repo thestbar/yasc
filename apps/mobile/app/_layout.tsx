@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StatusBar } from 'expo-status-bar'
 import * as SecureStore from 'expo-secure-store'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { Toaster } from 'sonner-native'
 import { authApi } from '../lib/api/auth'
 import { useAuthStore } from '../lib/store/auth'
 
@@ -44,6 +45,7 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style="auto" />
         </SessionRestore>
+        <Toaster />
       </QueryClientProvider>
     </GestureHandlerRootView>
   )
