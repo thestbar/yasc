@@ -36,4 +36,12 @@ export const expensesApi = {
 
   delete: (groupId: string, id: string) =>
     http.delete(`/groups/${groupId}/expenses/${id}`),
+
+  convertPreview: (groupId: string, id: string, to: string) =>
+    http.get<{ from: string; to: string; rate: number; originalAmount: number; convertedAmount: number }>(
+      `/groups/${groupId}/expenses/${id}/convert-preview`, { params: { to } }
+    ).then((r) => r.data),
+
+  convert: (groupId: string, id: string, targetCurrency: string) =>
+    http.post<Expense>(`/groups/${groupId}/expenses/${id}/convert`, { targetCurrency }).then((r) => r.data),
 }
