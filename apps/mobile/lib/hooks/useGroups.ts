@@ -57,6 +57,18 @@ export function useDeleteGroup() {
   })
 }
 
+export function useAddMember() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ groupId, query }: { groupId: string; query: string }) => {
+      const isEmail = query.includes('@')
+      return groupsApi.addMember(groupId, isEmail ? { email: query } : { username: query })
+    },
+    onSuccess: (_, { groupId }) =>
+      qc.invalidateQueries({ queryKey: ['groups', groupId, 'members'] }),
+  })
+}
+
 export function useRemoveMember() {
   const qc = useQueryClient()
   return useMutation({
@@ -80,5 +92,24 @@ export function useRegenerateInvite() {
   return useMutation({
     mutationFn: (id: string) => groupsApi.regenerateInvite(id),
     onSuccess: (_, id) => qc.invalidateQueries({ queryKey: ['groups', id] }),
+  })
+}
+
+export function useConvertAllPreview(groupId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['groups', groupId, 'convert-all-preview'],
+    queryFn: () => groupsApi.convertAllPreview(groupId),
+    enabled: !!groupId && enabled,
+  })
+}
+
+export function useConvertAll() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => groupsApi.convertAll(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ['expenses', id] })
+      qc.invalidateQueries({ queryKey: ['groups', id, 'balances'] })
+    },
   })
 }
