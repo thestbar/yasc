@@ -2,7 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "allowJs": true,
     "jsx": "react-native",
     "module": "ESNext",
@@ -10,10 +12,24 @@
     "noEmit": true,
     "strict": true,
     "paths": {
-      "@yasc/types": ["../../packages/types/src/index.ts"],
-      "@yasc/utils": ["../../packages/utils/src/index.ts"],
-      "@yasc/ui-native": ["../../packages/ui-native/src/index.ts"]
+      "@yasc/types": [
+        "../../packages/types/src/index.ts"
+      ],
+      "@yasc/utils": [
+        "../../packages/utils/src/index.ts"
+      ],
+      "@yasc/ui-native": [
+        "../../packages/ui-native/src/index.ts"
+      ]
     }
   },
-  "include": ["app", "lib", "*.ts", "*.tsx", "nativewind-env.d.ts"]
+  "include": [
+    "app",
+    "lib",
+    "*.ts",
+    "*.tsx",
+    "nativewind-env.d.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
 }
