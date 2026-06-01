@@ -17,7 +17,7 @@ services:
       - yasc_net
 
   frankfurter:
-    image: ghcr.io/hakanensari/frankfurter
+    image: hakanensari/frankfurter
     restart: unless-stopped
     networks:
       - yasc_net

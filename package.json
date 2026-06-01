@@ -2,6 +2,7 @@
   "name": "yasc",
   "private": true,
   "version": "0.0.1",
+  "packageManager": "pnpm@11.5.0",
   "scripts": {
     "build": "nx run-many --target=build",
     "test": "nx run-many --target=test",
