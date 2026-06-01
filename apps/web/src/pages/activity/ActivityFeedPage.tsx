@@ -76,7 +76,7 @@ function activityText(item: ActivityItem): string {
       return `${actor} updated group settings${fields}${inGroup}`
     }
     default:
-      return `${actor} did something${group}`
+      return `${actor} did something${inGroup}`
   }
 }
 
